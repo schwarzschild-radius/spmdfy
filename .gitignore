@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# Build directory
+build/
+
+# Vim swap files
+*.swp
+
+# VSCode directory
+.vscode/
