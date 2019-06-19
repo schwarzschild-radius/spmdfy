@@ -1,31 +1,7 @@
 #include <spmdfy/SpmdfyAction.hpp>
 
 namespace spmdfy {
-std::string sourceDump(const clang::SourceManager &sm,
-                       const clang::LangOptions &lang_opt,
-                       const clang::SourceLocation &begin,
-                       const clang::SourceLocation &end) {
-    clang::SourceLocation e(
-        clang::Lexer::getLocForEndOfToken(end, 0, sm, lang_opt));
-    clang::SourceLocation b(
-        clang::Lexer::GetBeginningOfToken(begin, sm, lang_opt));
-    if ((sm.getCharacterData(e) - sm.getCharacterData(b)) < 1) {
-        llvm::errs() << "Cannot dump source\n";
-        return "";
-    }
-    return std::string(sm.getCharacterData(begin),
-                       (sm.getCharacterData(e) - sm.getCharacterData(b)));
-}
 
-clang::Stmt *
-SpmdfyStmtVisitor::VisitCompoundStmt(clang::CompoundStmt *cpmd_stmt) {
-    llvm::errs() << "Visiting Compound Statment\n";
-    for (auto i = cpmd_stmt->body_begin(); i != cpmd_stmt->body_end(); i++) {
-        if (Visit(*i))
-            continue;
-    }
-    return cpmd_stmt;
-}
 std::unique_ptr<clang::ASTConsumer> SpmdfyAction::newASTConsumer() {
     m_finder.reset(new clang::ast_matchers::MatchFinder);
     m_finder->addMatcher(
@@ -38,6 +14,9 @@ std::unique_ptr<clang::ASTConsumer> SpmdfyAction::newASTConsumer() {
                           mat::isExpansionInMainFile(), mat::isDefinition())
             .bind("cudaDeviceFunction"),
         this);
+    m_finder->addMatcher(mat::varDecl(mat::isExpansionInMainFile(), mat::hasGlobalStorage())
+                             .bind("globalDeclarations"),
+                         this);
     return m_finder->newASTConsumer();
 }
 
@@ -58,12 +37,12 @@ bool SpmdfyAction::cudaKernelFunction(
     llvm::errs() << kernel_function->getNameAsString() << "\n";
     // 1. Name
     std::string name = kernel_function->getNameAsString();
-    
+
     clang::SourceManager &sm = *result.SourceManager;
     clang::LangOptions lang_opt;
     // 2. Export
     metadata["exported"] = true;
-    
+
     // 3. Params
     metadata["params"] = {};
     for (auto param_idx = 0; param_idx < kernel_function->getNumParams();
@@ -71,12 +50,14 @@ bool SpmdfyAction::cudaKernelFunction(
         metadata["params"].push_back(
             sourceDump(sm, lang_opt, kernel_function->getParamDecl(param_idx)));
     }
-    
+
     clang::Stmt *body = kernel_function->getBody();
     if (body) {
         stmt_visitor->Visit(body);
     }
-    m_function_metadata[name] = metadata;
+    metadata["body"] = stmt_visitor->getFunctionBody();
+    metadata["shmem"] = stmt_visitor->getSharedMem();
+    m_function_metadata["function"][name] = metadata;
     return true;
 }
 
@@ -99,7 +80,8 @@ bool SpmdfyAction::cudaDeviceFunction(
     metadata["exported"] = false;
 
     // 3. Return Type
-    metadata["return_type"] = device_function->getReturnType().getAsString();
+    std::string return_type = device_function->getReturnType().getAsString();
+    metadata["return_type"] = return_type;
 
     // 4. Params
     metadata["params"] = {};
@@ -112,12 +94,41 @@ bool SpmdfyAction::cudaDeviceFunction(
     if (body) {
         stmt_visitor->Visit(body);
     }
-    m_function_metadata[name] = metadata;
+    m_function_metadata["function"][name] = metadata;
+    return true;
+}
+
+bool SpmdfyAction::globalDeclarations(
+    const mat::MatchFinder::MatchResult &result) {
+    llvm::StringRef ref("globalDeclarations");
+    auto *global_variable = result.Nodes.getNodeAs<clang::VarDecl>(ref);
+    if (!global_variable) {
+        return false;
+    }
+    clang::SourceManager &sm = *result.SourceManager;
+    clang::LangOptions lang_opt;
+    if(global_variable->hasAttr<clang::CUDAConstantAttr>()){
+        llvm::errs() << sourceDump(sm, lang_opt,
+                                global_variable->getTypeSpecStartLoc(),
+                                global_variable->getSourceRange().getEnd())
+                    << '\n';
+        m_function_metadata["globals"].push_back(
+            sourceDump(sm, lang_opt, global_variable->getTypeSpecStartLoc(),
+                    global_variable->getSourceRange().getEnd()) +
+            ";");
+    }else{
+        m_function_metadata["globals"].push_back(
+            sourceDump(sm, lang_opt, global_variable->getSourceRange().getBegin(),
+                    global_variable->getSourceRange().getEnd()) +
+            ";");
+    }
     return true;
 }
 
 void SpmdfyAction::run(const mat::MatchFinder::MatchResult &result) {
     stmt_visitor = new SpmdfyStmtVisitor(*result.SourceManager);
+    if (globalDeclarations(result))
+        return;
     if (cudaKernelFunction(result))
         return;
     if (cudaDeviceFunction(result))
