@@ -7,7 +7,6 @@
 #include <llvm/Support/Path.h>
 
 // spmdfy headers
-#include <fstream>
 #include <spmdfy/SpmdfyAction.hpp>
 
 // standard header
@@ -43,18 +42,54 @@ std::string getAbsoluteFilePath(const std::string &sFile, std::error_code &EC) {
 }
 
 std::string generateISPCKernel(std::string name, nl::json metadata) {
+    std::string ispc_grid_for = R"(
+        for(blockIdx.z = 0; blockIdx.z < gridDim.z; blockIdx.z++){
+            for(blockIdx.y = 0; blockIdx.y < gridDim.y; blockIdx.y++){
+                for(blockIdx.x = 0; blockIdx.x < gridDim.x; blockIdx.x++){
+    )";
+
+    std::string ispc_block_for = R"(
+        for(threadIdx.z = 0; threadIdx.z < blockDim.z; threadIdx.z++){
+            for(threadIdx.y = 0; threadIdx.y < blockDim.y; threadIdx.y++){
+                for(threadIdx.x = 0; threadIdx.x < blockDim.x; threadIdx.x++){
+    )";
+
+    std::string ispc_for_end = R"(
+                }
+            }
+        }
+    )";
+
     std::ostringstream function_string;
     function_string << "export ";
     function_string << "void " << name << R"(
         (uniform Dim3& gridDim, uniform Dim3& blockDim
     )";
 
+    // shared mem
+    for (std::string shmem : metadata["shmem"]) {
+        function_string << ", uniform " << shmem << '\n';
+    }
+
+    // params
     for (std::string param : metadata["params"]) {
         function_string << ", uniform " << param << '\n';
     }
 
     function_string << "){\n";
 
+    function_string << "uniform int<3> blockIdx, threadIdx;\n";
+    function_string << ispc_grid_for;
+
+    // body
+    for (auto& [block, body] : metadata["body"].items()) {
+        function_string << ispc_block_for;
+        for (std::string line : body) {
+            function_string << line << '\n';
+        }
+        function_string << ispc_for_end;
+    }
+    function_string << ispc_for_end;
 
     function_string << "}\n";
     return function_string.str();
@@ -62,7 +97,16 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
 
 std::string generateISPCFunction(std::string name, nl::json metadata) {
     std::ostringstream function_string;
-    function_string << metadata["return_type"].c_str() << " " << name << "(";
+    function_string << (std::string)metadata["return_type"] << " " << name
+                    << "(";
+    // params
+    for (std::string param : metadata["params"]) {
+        function_string << param << '\n';
+    }
+
+    function_string << "){\n";
+
+    // body
 
     function_string << "}\n";
     return function_string.str();
@@ -121,11 +165,14 @@ int main(int argc, const char **argv) {
         std::string ispc_dim_struct = "struct Dim3{\n"
                                       "     uniform int x, y, z;\n"
                                       "};\n";
-
         out_file << ispc_dim_struct;
 
-        for (auto &[name, data] : metadata.items()) {
-            if(data["exported"])
+        for(std::string var_decl : metadata["globals"]){
+            out_file << "uniform " << var_decl << '\n';
+        }
+
+        for (auto &[name, data] : metadata["function"].items()) {
+            if (data["exported"])
                 out_file << generateISPCKernel(name, data) << '\n';
             else
                 out_file << generateISPCFunction(name, data) << '\n';
