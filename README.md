@@ -10,3 +10,6 @@ A transpiler from CUDA to ISPC using libTooling
 ## Build Instructions
     mkdir build && cd build
     cmake -G Ninja -DLLVM_DIR=path_to_llvm_cmake_dir ..
+
+## Usage
+    ./spmdfy ../examples/transpose/transpose.cu -o transpose.ispc
