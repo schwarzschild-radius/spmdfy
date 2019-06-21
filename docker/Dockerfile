@@ -1,4 +1,4 @@
-FROM nvidia/cuda:9.2-base-ubuntu16.04
+FROM nvidia/cuda:9.2-devel
 MAINTAINER Pradeep Kumar <pradeepisro49@gmail.com>
 
 # Packages required to build ISPC and Clang.
@@ -56,3 +56,19 @@ RUN cmake ../ -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=/usr/local/src
 RUN make ispc -j8 && make install
 WORKDIR ../
 RUN rm -rf build_$LLVM_VERSION
+
+RUN echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main" >> /etc/apt/sources.list && echo "deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial main" >> /etc/apt/sources.list && wget https://apt.llvm.org/llvm-snapshot.gpg.key && apt-key add llvm-snapshot.gpg.key
+
+RUN apt update && apt-get install -y --no-install-recommends software-properties-common && add-apt-repository ppa:ubuntu-toolchain-r/test &&  apt update && apt install -y clang-9 libclang-9-dev llvm-9-tools libstdc++-9-dev
+
+WORKDIR /usr/home/
+
+RUN git clone https://github.com/schwarzschild-radius/spmdfy.git
+
+WORKDIR /usr/home/spmdfy
+
+RUN git checkout baseline && mkdir build
+
+WORKDIR /usr/home/spmdfy/build
+
+RUN cmake .. -DLLVM_DIR=/usr/lib/llvm-9/lib/cmake/llvm -DCMAKE_CXX_FLAGS=-std=c++17 && make
