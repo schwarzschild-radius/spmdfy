@@ -63,8 +63,9 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
     std::ostringstream function_string;
     function_string << "export ";
     function_string << "void " << name << R"(
-        (uniform Dim3& gridDim, uniform Dim3& blockDim
-    )";
+        (uniform Dim3& gridDim, uniform Dim3& blockDim, 
+         uniform unsigned int32 shared_memory_size
+        )";
 
     // shared mem
     for (std::string shmem : metadata["shmem"]) {
@@ -82,7 +83,7 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
     function_string << ispc_grid_for;
 
     // body
-    for (auto& [block, body] : metadata["body"].items()) {
+    for (auto &[block, body] : metadata["body"].items()) {
         function_string << ispc_block_for;
         for (std::string line : body) {
             function_string << line << '\n';
@@ -167,7 +168,7 @@ int main(int argc, const char **argv) {
                                       "};\n";
         out_file << ispc_dim_struct;
 
-        for(std::string var_decl : metadata["globals"]){
+        for (std::string var_decl : metadata["globals"]) {
             out_file << "uniform " << var_decl << '\n';
         }
 
