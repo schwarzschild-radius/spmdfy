@@ -14,9 +14,10 @@ std::unique_ptr<clang::ASTConsumer> SpmdfyAction::newASTConsumer() {
                           mat::isExpansionInMainFile(), mat::isDefinition())
             .bind("cudaDeviceFunction"),
         this);
-    m_finder->addMatcher(mat::varDecl(mat::isExpansionInMainFile(), mat::hasGlobalStorage())
-                             .bind("globalDeclarations"),
-                         this);
+    m_finder->addMatcher(
+        mat::varDecl(mat::isExpansionInMainFile(), mat::hasGlobalStorage())
+            .bind("globalDeclarations"),
+        this);
     return m_finder->newASTConsumer();
 }
 
@@ -45,10 +46,18 @@ bool SpmdfyAction::cudaKernelFunction(
 
     // 3. Params
     metadata["params"] = {};
-    for (auto param_idx = 0; param_idx < kernel_function->getNumParams();
+    for (size_t param_idx = 0; param_idx < kernel_function->getNumParams();
          param_idx++) {
-        metadata["params"].push_back(
-            sourceDump(sm, lang_opt, kernel_function->getParamDecl(param_idx)));
+        auto param = kernel_function->getParamDecl(param_idx);
+        clang::QualType param_type = param->getOriginalType();
+        llvm::errs() << param_type.getAsString() << ' ' << param_type->isPointerType() << '\n';
+        if(param_type->isPointerType()){
+            std::string pointee_type = param_type->getPointeeType().getAsString();
+            metadata["params"].push_back(pointee_type + " " + param->getNameAsString() + "[]");
+        }else{
+            metadata["params"].push_back(
+                sourceDump(sm, lang_opt, param));
+        }
     }
 
     clang::Stmt *body = kernel_function->getBody();
@@ -87,8 +96,9 @@ bool SpmdfyAction::cudaDeviceFunction(
     metadata["params"] = {};
     for (auto param_idx = 0; param_idx < device_function->getNumParams();
          param_idx++) {
+        auto param = device_function->getParamDecl(param_idx);
         metadata["params"].push_back(
-            sourceDump(sm, lang_opt, device_function->getParamDecl(param_idx)));
+            sourceDump(sm, lang_opt, param));
     }
     clang::Stmt *body = device_function->getBody();
     if (body) {
@@ -107,19 +117,20 @@ bool SpmdfyAction::globalDeclarations(
     }
     clang::SourceManager &sm = *result.SourceManager;
     clang::LangOptions lang_opt;
-    if(global_variable->hasAttr<clang::CUDAConstantAttr>()){
+    if (global_variable->hasAttr<clang::CUDAConstantAttr>()) {
         llvm::errs() << sourceDump(sm, lang_opt,
-                                global_variable->getTypeSpecStartLoc(),
-                                global_variable->getSourceRange().getEnd())
-                    << '\n';
+                                   global_variable->getTypeSpecStartLoc(),
+                                   global_variable->getSourceRange().getEnd())
+                     << '\n';
         m_function_metadata["globals"].push_back(
             sourceDump(sm, lang_opt, global_variable->getTypeSpecStartLoc(),
-                    global_variable->getSourceRange().getEnd()) +
+                       global_variable->getSourceRange().getEnd()) +
             ";");
-    }else{
+    } else {
         m_function_metadata["globals"].push_back(
-            sourceDump(sm, lang_opt, global_variable->getSourceRange().getBegin(),
-                    global_variable->getSourceRange().getEnd()) +
+            sourceDump(sm, lang_opt,
+                       global_variable->getSourceRange().getBegin(),
+                       global_variable->getSourceRange().getEnd()) +
             ";");
     }
     return true;
