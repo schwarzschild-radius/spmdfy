@@ -51,7 +51,7 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
     std::string ispc_block_for = R"(
         for(threadIdx.z = 0; threadIdx.z < blockDim.z; threadIdx.z++){
             for(threadIdx.y = 0; threadIdx.y < blockDim.y; threadIdx.y++){
-                for(threadIdx.x = 0; threadIdx.x < blockDim.x; threadIdx.x++){
+                for(threadIdx.x = programIndex; threadIdx.x < blockDim.x; threadIdx.x+= programCount){
     )";
 
     std::string ispc_for_end = R"(
@@ -79,7 +79,7 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
 
     function_string << "){\n";
 
-    function_string << "uniform int<3> blockIdx, threadIdx;\n";
+    function_string << "unsigned int<3> blockIdx, threadIdx;\n";
     function_string << ispc_grid_for;
 
     // body
