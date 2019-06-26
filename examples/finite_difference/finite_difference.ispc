@@ -21,10 +21,12 @@ uniform float c_az;
 uniform float c_bz;
 uniform float c_cz;
 uniform float c_dz;
+uniform;
 export void derivative_x(uniform Dim3 &gridDim, uniform Dim3 &blockDim,
+                         uniform unsigned int32 shared_memory_size,
                          uniform float s_f[sPencils][mx + 8], uniform float f[],
                          uniform float df[]) {
-    uniform int<3> blockIdx, threadIdx;
+    unsigned int<3> blockIdx, threadIdx;
 
     for (blockIdx.z = 0; blockIdx.z < gridDim.z; blockIdx.z++) {
         for (blockIdx.y = 0; blockIdx.y < gridDim.y; blockIdx.y++) {
@@ -33,8 +35,11 @@ export void derivative_x(uniform Dim3 &gridDim, uniform Dim3 &blockDim,
                 for (threadIdx.z = 0; threadIdx.z < blockDim.z; threadIdx.z++) {
                     for (threadIdx.y = 0; threadIdx.y < blockDim.y;
                          threadIdx.y++) {
-                        for (threadIdx.x = 0; threadIdx.x < blockDim.x;
-                             threadIdx.x++) {
+                        for (threadIdx.x = programIndex;
+                             threadIdx.x < blockDim.x;
+                             threadIdx.x += programCount) {
+                            if (blockIdx.x == 0 && threadIdx.x == 0) {
+                            }
                             int i = threadIdx.x;
                             int j = blockIdx.x * blockDim.y + threadIdx.y;
                             int k = blockIdx.y;
@@ -49,8 +54,9 @@ export void derivative_x(uniform Dim3 &gridDim, uniform Dim3 &blockDim,
                 for (threadIdx.z = 0; threadIdx.z < blockDim.z; threadIdx.z++) {
                     for (threadIdx.y = 0; threadIdx.y < blockDim.y;
                          threadIdx.y++) {
-                        for (threadIdx.x = 0; threadIdx.x < blockDim.x;
-                             threadIdx.x++) {
+                        for (threadIdx.x = programIndex;
+                             threadIdx.x < blockDim.x;
+                             threadIdx.x += programCount) {
                             int i = threadIdx.x;
                             int j = blockIdx.x * blockDim.y + threadIdx.y;
                             int k = blockIdx.y;
@@ -68,8 +74,9 @@ export void derivative_x(uniform Dim3 &gridDim, uniform Dim3 &blockDim,
                 for (threadIdx.z = 0; threadIdx.z < blockDim.z; threadIdx.z++) {
                     for (threadIdx.y = 0; threadIdx.y < blockDim.y;
                          threadIdx.y++) {
-                        for (threadIdx.x = 0; threadIdx.x < blockDim.x;
-                             threadIdx.x++) {
+                        for (threadIdx.x = programIndex;
+                             threadIdx.x < blockDim.x;
+                             threadIdx.x += programCount) {
                             int i = threadIdx.x;
                             int j = blockIdx.x * blockDim.y + threadIdx.y;
                             int k = blockIdx.y;
