@@ -4,19 +4,27 @@ namespace spmdfy {
 
 std::unique_ptr<clang::ASTConsumer> SpmdfyAction::newASTConsumer() {
     m_finder.reset(new clang::ast_matchers::MatchFinder);
+    // match kernel function
     m_finder->addMatcher(
         mat::functionDecl(mat::hasAttr(clang::attr::CUDAGlobal),
                           mat::isDefinition())
             .bind("cudaKernelFunction"),
         this);
+    // match device function
     m_finder->addMatcher(
         mat::functionDecl(mat::hasAttr(clang::attr::CUDADevice),
                           mat::isExpansionInMainFile(), mat::isDefinition())
             .bind("cudaDeviceFunction"),
         this);
+    // match global decls
     m_finder->addMatcher(
         mat::varDecl(mat::isExpansionInMainFile(), mat::hasGlobalStorage())
             .bind("globalDeclarations"),
+        this);
+    // match struct types
+    m_finder->addMatcher(
+        mat::cxxRecordDecl(mat::has(mat::cxxConstructorDecl(mat::hasAttr(clang::attr::CUDADevice))))
+            .bind("structType"),
         this);
     return m_finder->newASTConsumer();
 }
@@ -136,6 +144,17 @@ bool SpmdfyAction::globalDeclarations(
     return true;
 }
 
+bool SpmdfyAction::structType(const mat::MatchFinder::MatchResult &result){
+    llvm::StringRef ref("structType");
+    auto *struct_type = result.Nodes.getNodeAs<clang::CXXRecordDecl>(ref);
+    if(!struct_type){
+        return false;
+    }
+    llvm::errs() << "Matcher: structType\n";
+    llvm::errs() << struct_type->getNameAsString() << '\n';
+    return true;
+}
+
 void SpmdfyAction::run(const mat::MatchFinder::MatchResult &result) {
     stmt_visitor = new SpmdfyStmtVisitor(*result.SourceManager);
     if (globalDeclarations(result))
@@ -143,6 +162,8 @@ void SpmdfyAction::run(const mat::MatchFinder::MatchResult &result) {
     if (cudaKernelFunction(result))
         return;
     if (cudaDeviceFunction(result))
+        return;
+    if (structType(result))
         return;
 }
 

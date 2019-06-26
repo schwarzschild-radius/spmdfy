@@ -40,6 +40,7 @@ class SpmdfyAction : public clang::ASTFrontendAction,
     bool cudaKernelFunction(const mat::MatchFinder::MatchResult &result);
     bool cudaDeviceFunction(const mat::MatchFinder::MatchResult &result);
     bool globalDeclarations(const mat::MatchFinder::MatchResult &result);
+    bool structType(const mat::MatchFinder::MatchResult &result);
 
     std::unique_ptr<clang::ASTConsumer> newASTConsumer();
     std::unique_ptr<clang::ASTConsumer>
