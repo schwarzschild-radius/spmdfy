@@ -168,16 +168,36 @@ int main(int argc, const char **argv) {
                                       "};\n";
         out_file << ispc_dim_struct;
 
+        // generating global declarations...
         for (std::string var_decl : metadata["globals"]) {
             out_file << "uniform " << var_decl << '\n';
         }
 
+        // generating struct declarations...
+        for (auto &[name, data] : metadata["structs"].items()){
+            out_file << "struct " << name << "{\n";
+            for(auto field : data["fields"]){
+                out_file << field << '\n';
+            }
+            out_file << "};\n";
+
+            out_file << name << "_ctor(";
+            out_file << "){\n";
+            out_file << name << " temp;"; << '\n';
+            for(auto field : data["fields"]){
+                out_file << field << '\n';
+            }
+            out_file << "return temp;" << '\n';
+        }
+
+        // generating ispc kernel and functions...
         for (auto &[name, data] : metadata["function"].items()) {
             if (data["exported"])
                 out_file << generateISPCKernel(name, data) << '\n';
             else
                 out_file << generateISPCFunction(name, data) << '\n';
         }
+        std::cout << metadata.dump() << '\n';
     }
     out_file.close();
     return 0;
