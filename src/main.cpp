@@ -8,6 +8,7 @@
 
 // spmdfy headers
 #include <spmdfy/SpmdfyAction.hpp>
+#include <spmdfy/Format.hpp>
 
 // standard header
 #include <fstream>
@@ -180,5 +181,8 @@ int main(int argc, const char **argv) {
         }
     }
     out_file.close();
+    
+    if(spmdfy::format::format(filename))
+        llvm::errs() << "Unable to format\n";
     return 0;
 }
