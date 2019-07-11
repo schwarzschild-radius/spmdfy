@@ -78,7 +78,6 @@ bool format(StringRef FileName) {
     clang::format::FormattingAttemptStatus Status;
     Replacements FormatChanges =
         reformat(*FormatStyle, *ChangedCode, Ranges, FileName, &Status);
-    errs() << (Status.FormatComplete ? "false" : "true") << '\n';
     Replaces = Replaces.merge(FormatChanges);
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
         new llvm::vfs::InMemoryFileSystem);
