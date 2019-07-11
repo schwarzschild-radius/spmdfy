@@ -18,9 +18,7 @@ std::unique_ptr<clang::ASTConsumer> SpmdfyAction::newASTConsumer() {
         this);
     // match global decls
     m_finder->addMatcher(
-        mat::varDecl(mat::anyOf(mat::hasParent(mat::translationUnitDecl()),
-                                mat::hasParent(mat::namespaceDecl())),
-                     mat::isExpansionInMainFile())
+        mat::varDecl(mat::isExpansionInMainFile(), mat::hasGlobalStorage(), mat::hasParent(mat::translationUnitDecl()))
             .bind("globalDeclarations"),
         this);
     // match struct types

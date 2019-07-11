@@ -13,7 +13,8 @@ endif()
 add_executable(spmdfy src/main.cpp 
                       src/SpmdfyAction.cpp
                       src/SpmdfyStmtVisitor.cpp
-                      src/utils.cpp)
+                      src/utils.cpp
+                      src/Format.cpp)
 target_include_directories(spmdfy PRIVATE include)
 target_include_directories(spmdfy PRIVATE third_party/json/include)
 set_target_properties(spmdfy PROPERTIES CXX_STANDARD 17
@@ -37,7 +38,10 @@ set(CLANG_LIBS clangFrontend
                clangLex
                clangASTMatchers
                clangRewrite
-               clangFormat)
+               clangFormat
+               clangApplyReplacements
+               clangToolingCore
+               clangToolingInclusions)
 
 set(LLVM_LIBS LLVM)
 
