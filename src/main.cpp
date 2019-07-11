@@ -48,8 +48,6 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
     std::string ispc_block_end = "ISPC_BLOCK_END\n";
     std::string ispc_grid_end = "ISPC_GRID_END\n";
 
-
-
     std::ostringstream function_string;
     function_string << "export ";
     function_string << "void " << name << R"(
@@ -171,6 +169,9 @@ llvm::cl::OptionCategory spmdfy_options("spmdfy -help");
 llvm::cl::opt<std::string>
     output_filename("o", llvm::cl::desc("Specify Ouput Filename"),
                     llvm::cl::cat(spmdfy_options));
+cl::opt<bool> verbosity("v",
+                        cl::desc("Show commands to run and use verbose output"),
+                        cl::value_desc("v"), cl::cat(spmdfy_options));
 
 int main(int argc, const char **argv) {
     using namespace clang::tooling;
@@ -190,6 +191,7 @@ int main(int argc, const char **argv) {
     std::string source_abs_path = getAbsoluteFilePath(src, error_code);
     std::string includes =
         "-I" + llvm::sys::path::parent_path(source_abs_path).str();
+
     tool.appendArgumentsAdjuster(getInsertArgumentAdjuster(
         includes.c_str(), ArgumentInsertPosition::BEGIN));
     tool.appendArgumentsAdjuster(
@@ -209,6 +211,10 @@ int main(int argc, const char **argv) {
     tool.appendArgumentsAdjuster(
         getInsertArgumentAdjuster("-std=c++17", ArgumentInsertPosition::BEGIN));
     tool.appendArgumentsAdjuster(getClangSyntaxOnlyAdjuster());
+    if (verbosity) {
+        tool.appendArgumentsAdjuster(
+            getInsertArgumentAdjuster("-v", ArgumentInsertPosition::END));
+    }
 
     // run SPMDfy action on the source
     spmdfy::SpmdfyAction action;
