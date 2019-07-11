@@ -15,7 +15,7 @@ std::unique_ptr<clang::ASTConsumer> SpmdfyAction::newASTConsumer() {
             .bind("cudaDeviceFunction"),
         this);
     m_finder->addMatcher(
-        mat::varDecl(mat::isExpansionInMainFile(), mat::hasGlobalStorage())
+        mat::varDecl(mat::isExpansionInMainFile(), mat::hasGlobalStorage(), mat::hasParent(mat::translationUnitDecl()))
             .bind("globalDeclarations"),
         this);
     return m_finder->newASTConsumer();
