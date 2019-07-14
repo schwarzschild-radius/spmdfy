@@ -1,0 +1,141 @@
+{
+    "records": {
+        "struct_1": {
+            "variables": {
+                "name_1": {
+                    "type": "base type",
+                    "type_kind": "{array_type | incomplete_array_type}",
+                    "qualifier": "{const | optional}",
+                    "init": "[optional]"
+                },
+                "...": "..."
+            },
+            "ctors": {
+                "ctor_name": {
+                    "params": {
+                        "name_1": {
+                            "type": "base type",
+                            "type_kind": "{array_type | incomplete_array_type}",
+                            "[array_size]": "integer value",
+                            "qualifier": "{const | optional}",
+                            "init": "[optional]"
+                        },
+                        "...": "..."
+                    },
+                    "body": "..."
+                }
+            },
+            "methods": {
+                "method_name": {
+                    "return_type": "type",
+                    "params": {
+                        "param_1": {
+                            "name_1": {
+                                "type": "base type",
+                                "type_kind": "{array_type | incomplete_array_type}",
+                                "qualifier": "{const | optional}",
+                                "[init]": "optional"
+                            },
+                            "...": "..."
+                        },
+                        "...": "..."
+                    },
+                    "body": [
+                        "statment_1",
+                        "..."
+                    ]
+                }
+            }
+        }
+    },
+    "functions": {
+        "kernel": {
+            "return_type": "void",
+            "params": {
+                "param_1": {
+                    "name_1": {
+                        "type": "base type",
+                        "type_kind": "{array_type | incomplete_array_type}",
+                        "qualifier": "{const | optional}",
+                        "[init]": "optional"
+                    },
+                    "...": "..."
+                }
+            },
+            "shmem": {
+                "name": {
+                    "type": "{Built-in type | Records}",
+                    "type_kind": "{Built-in | array_type}",
+                    "[array_dims]": "integer_value",
+                    "[array_dim_value]" : ["integer_values"],
+                    "[array_size]": "integer value"
+                }
+            },
+            "extern_shmem": {
+                "name": {
+                    "type": "{Built-in type | Records}",
+                    "type_kind": "{Built-in | incomplete_array_type}"
+                }
+            },
+            "context": {
+                "name_1": {
+                    "type": "base type",
+                    "type_kind": "{array_type | incomplete_array_type}",
+                    "qualifier": "{const | static | optional}",
+                    "[init]": "expression"
+                },
+                "...": "..."
+            },
+            "body": [
+                [
+                    "statement_1",
+                    "..."
+                ],
+                [
+                    "..."
+                ]
+            ]
+        },
+        "device_function": {
+            "return_type": "{Built-in Type | ...}",
+            "shmem": {
+                "name": {
+                    "type": "{Built-in type | Records}",
+                    "type_kind": "{Built-in | array_type}",
+                    "[array_dim]": "integer_value",
+                    "[array_size]": "integer value"
+                }
+            },
+            "extern_shmem": {
+                "name": {
+                    "type": "{Built-in type | Records}",
+                    "type_kind": "{Built-in | incomplete_array_type}"
+                }
+            },
+            "params": {
+                "param_1": {
+                    "name_1": {
+                        "type": "base type",
+                        "type_kind": "{array_type | incomplete_array_type}",
+                        "[qualifier]": "{const}",
+                        "[init]": "optional"
+                    },
+                    "...": "..."
+                },
+                "body": [
+                    "statment",
+                    "..."
+                ]
+            }
+        },
+        "globals": {
+            "name_1": {
+                "type": "base type",
+                "type_kind": "{array_type | incomplete_array_type}",
+                "[qualifier]": "{const, static}",
+                "[init]": "expression"
+            },
+            "..." : "..."
+        }
+    }
+}
