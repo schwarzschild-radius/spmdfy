@@ -42,6 +42,26 @@ std::string getAbsoluteFilePath(const std::string &sFile, std::error_code &EC) {
     return fileAbsPath.c_str();
 }
 
+std::string getVarDecl(nl::json var_decl){
+    std::ostringstream var_decl_str;
+    if(!var_decl["type"]["qualifier"].is_null()){
+        var_decl_str << (std::string)var_decl["type"]["qualifier"] << " ";
+    }
+    var_decl_str << (std::string)var_decl["type"]["base_type"] << " ";
+    var_decl_str << (std::string)var_decl["name"];
+    if (var_decl["type"]["type_kind"] == "array_type") {
+        for(int i = 0; i < var_decl["type"]["array_dims"]; i++)
+            var_decl_str << "[" << var_decl["type"]["array_dim_value"][i] << "]";
+    } else if (var_decl["type"]["type_kind"] == "incomplete_array_type") {
+        var_decl_str << "[]";
+    }
+    if(!var_decl["init"].is_null()){
+        var_decl_str << "= " << (std::string)var_decl["init"];
+    }
+    var_decl_str << ";\n";
+    return var_decl_str.str();
+}
+
 std::string generateISPCKernel(std::string name, nl::json metadata) {
     std::string ispc_grid_start = "ISPC_GRID_START\n";
     std::string ispc_block_start = "ISPC_BLOCK_START\n";
@@ -65,26 +85,19 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
     function_string << "){\n";
     // shared memory
     if (!metadata["shmem"].is_null()) {
-        for (auto &[name, decl] : metadata["shmem"].items()) {
-            function_string << "uniform " << (std::string)decl["type"] << ' '
-                            << name;
-            if (decl["type_kind"] == "array_type") {
-                for(int i = 0; i < decl["array_dims"]; i++)
-                    function_string << "[" << decl["array_dim_value"][i] << "]";
-            } else if (decl["type_kind"] == "incomplete_array_type") {
-                function_string << "[]";
-            }
-            function_string << ";\n";
+        for (auto &var_decl : metadata["shmem"]) {
+            function_string << "uniform ";
+            function_string << getVarDecl(var_decl);
         }
     }
     // extern shared memory
     if (!metadata["extern_shmem"].is_null()) {
-        for (auto &[name, decl] : metadata["extern_shmem"].items()) {
-            function_string << "uniform " << (std::string)decl["type"]
-                            << " * uniform " << name
+        for (auto &var_decl : metadata["extern_shmem"]) {
+            function_string << "uniform " << (std::string)var_decl["type"]["base_type"]
+                            << " * uniform " << var_decl["name"]
                             << " = uniform new uniform "
-                            << (std::string)decl["type"];
-            if (decl["type_kind"] == "IncompleteType") {
+                            << (std::string)var_decl["type"]["base_type"];
+            if (var_decl["type"]["type_kind"] == "IncompleteType") {
                 function_string << "[shared_memory_size]";
             }
             function_string << ";\n";
@@ -96,6 +109,9 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
     // body
     for (auto &[block, body] : metadata["body"].items()) {
         function_string << ispc_block_start;
+        for (auto &[name, decl] : metadata["context"].items()) {
+            function_string << getVarDecl(decl);
+        }
         for (std::string line : body) {
             function_string << line << '\n';
         }

@@ -3,18 +3,20 @@
 namespace spmdfy {
 clang::Stmt *
 SpmdfyStmtVisitor::VisitCompoundStmt(clang::CompoundStmt *cpmd_stmt) {
+    m_scope++;
     llvm::errs() << "Visiting Compound Statment\n";
     for (auto stmt = cpmd_stmt->body_begin(); stmt != cpmd_stmt->body_end();
          stmt++) {
         if (Visit(*stmt))
             continue;
+        llvm::errs() << "Statment: ";
         std::string line = sourceDump(m_sm, m_lang_opt, *stmt);
+        if (line.back() != ';' && line.size() != 0 && line != "\n")
+            line += ';';
         llvm::errs() << line << '\n';
         m_function_body[m_block].push_back(line);
     }
-    if (m_function_body[m_block].size() != 0)
-        m_function_body[m_block].back() =
-            (std::string)m_function_body[m_block].back() + ";";
+    m_scope--;
     return cpmd_stmt;
 }
 
@@ -74,42 +76,51 @@ clang::Stmt *SpmdfyStmtVisitor::VisitDeclStmt(clang::DeclStmt *decl_stmt) {
         if (llvm::isa<clang::VarDecl>(dgr)) {
             auto var_decl = llvm::cast<clang::VarDecl>(dgr);
             std::string var_name = var_decl->getNameAsString();
+            nl::json var_metadata;
+            var_metadata["name"] = var_name;
             clang::QualType var_type = var_decl->getTypeSourceInfo()->getType();
-            std::string type_str = "";
+            var_metadata["type"]["base_type"] = var_type.getAsString();
+            var_metadata["type"]["type_kind"] = "Built-in";
+            if (var_type.hasQualifiers())
+                var_metadata["type"]["qualifiers"] =
+                    var_type.getQualifiers().getAsString();
+            clang::Expr *var_init = var_decl->getInit();
+            if (var_init) {
+                var_metadata["init"] =
+                    sourceDump(m_sm, m_lang_opt, var_init);
+            }
+            if (var_type->isIncompleteType()) {
+                var_metadata["type"]["base_type"] = var_type->getAsArrayTypeUnsafe()
+                                                    ->getElementType()
+                                                    .getAsString();
+                var_metadata["type"]["type_kind"] = "IncompleteType";
+            }else if(var_type->isConstantArrayType()) {
+                int count = 0;
+                var_metadata["type"]["array_dim_value"] = {};
+                do {
+                    auto const_arr_type =
+                        clang::cast<clang::ConstantArrayType>(var_type);
+                    var_metadata["type"]["array_dim_value"].push_back(
+                        (int)*const_arr_type->getSize().getRawData());
+                    count++;
+                    var_type = const_arr_type->getElementType();
+                } while (var_type->isConstantArrayType());
+                var_metadata["type"]["array_dims"] = count;
+                var_metadata["type"]["type_kind"] = "array_type";
+                var_metadata["type"]["base_type"] = var_type.getAsString();
+            }
             if (var_decl->hasAttr<clang::CUDASharedAttr>()) { // parsing shared
                                                               // memory
                 if (var_decl->hasExternalStorage()) {
-                    auto &extern_shmem = m_extern_shmem[var_name];
-                    if (hasIncompleteType(var_decl)) {
-                        extern_shmem["type"] = var_type->getAsArrayTypeUnsafe()
-                                                   ->getElementType()
-                                                   .getAsString();
-                        extern_shmem["type_kind"] = "IncompleteType";
-                        return decl_stmt;
-                    }
-                    extern_shmem["type"] = var_type.getAsString();
-                    extern_shmem["type_kind"] = "Built-in";
+                    m_extern_shmem.push_back(var_metadata);
                     return decl_stmt;
                 }
-                auto &shmem = m_shmem[var_name];
-                if (var_type->isConstantArrayType()) {
-                    int count = 0;
-                    shmem["array_dim_value"] = {};
-                    do {
-                        auto const_arr_type =
-                            clang::cast<clang::ConstantArrayType>(var_type);
-                        shmem["array_dim_value"].push_back(
-                            (int)*const_arr_type->getSize().getRawData());
-                        count++;
-                        var_type = const_arr_type->getElementType();
-                    } while (var_type->isConstantArrayType());
-                    shmem["array_dims"] = count;
-                    shmem["type_kind"] = "array_type";
-                    shmem["type"] = var_type.getAsString();
-                    return decl_stmt;
-                }
-                shmem["type"] = var_type.getAsString();
-                shmem["type_kind"] = "Built-in";
+                m_shmem.push_back(var_metadata);
+            }
+            llvm::errs() << sourceDump(m_sm, m_lang_opt, decl_stmt) << '\n';
+            if (m_scope == 0) {
+                m_context.push_back(var_metadata);
+                return decl_stmt;
             }
         }
     }
@@ -128,6 +139,58 @@ clang::Stmt *SpmdfyStmtVisitor::VisitForStmt(clang::ForStmt *for_stmt) {
         m_function_body[m_block].push_back("}\n");
     }
     return for_stmt;
+}
+
+clang::Stmt *SpmdfyStmtVisitor::VisitIfStmt(clang::IfStmt *if_stmt) {
+    llvm::errs() << "Visiting If Statement\n";
+    std::ostringstream if_stmt_str;
+    m_function_body[m_block].push_back("if (");
+    clang::Stmt *if_init = if_stmt->getInit();
+    if (if_init) {
+        llvm::errs() << "ifInit: "
+                     << sourceDump(m_sm, m_lang_opt,
+                                   if_init->getSourceRange().getBegin(),
+                                   if_init->getSourceRange().getEnd())
+                     << ";\n";
+        m_function_body[m_block].push_back(
+            sourceDump(m_sm, m_lang_opt, if_init->getSourceRange().getBegin(),
+                       if_init->getSourceRange().getEnd()) +
+            ";");
+    }
+    clang::Expr *if_cond = if_stmt->getCond();
+    if (if_cond) {
+        llvm::errs() << sourceDump(m_sm, m_lang_opt,
+                                   if_cond->getSourceRange().getBegin(),
+                                   if_cond->getSourceRange().getEnd());
+        m_function_body[m_block].push_back(
+            sourceDump(m_sm, m_lang_opt, if_cond->getSourceRange().getBegin(),
+                       if_cond->getSourceRange().getEnd()) +
+            ")");
+    }
+    m_function_body[m_block].push_back("{\n");
+    clang::Stmt *if_then = if_stmt->getThen();
+    if (if_then) {
+        llvm::errs() << "ifThen:\n";
+        /*         m_function_body[m_block].push_back(sourceDump(m_sm,
+           m_lang_opt, if_then->getSourceRange().getBegin(),
+                                          if_then->getSourceRange().getBegin()));
+         */
+        Visit(if_then);
+    }
+    m_function_body[m_block].push_back("}");
+    clang::Stmt *if_else = if_stmt->getElse();
+    if (if_else) {
+        m_function_body[m_block].push_back(" else ");
+        llvm::errs() << "ifElse:\n";
+        if (llvm::isa<clang::IfStmt>(if_else)) {
+            Visit(if_else);
+            return if_else;
+        }
+        m_function_body[m_block].push_back("{\n");
+        Visit(if_else);
+        m_function_body[m_block].push_back("}\n");
+    }
+    return if_stmt;
 }
 
 } // namespace spmdfy

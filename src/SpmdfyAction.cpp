@@ -64,6 +64,7 @@ bool SpmdfyAction::cudaKernelFunction(
     if (body) {
         m_stmt_visitor->Visit(body);
     }
+    metadata["context"] = m_stmt_visitor->getContext();
     metadata["body"] = m_stmt_visitor->getFunctionBody();
     metadata["shmem"] = m_stmt_visitor->getSharedMem();
     metadata["extern_shmem"] = m_stmt_visitor->getExternSharedMem();
