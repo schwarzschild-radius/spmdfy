@@ -42,61 +42,75 @@ std::string getAbsoluteFilePath(const std::string &sFile, std::error_code &EC) {
     return fileAbsPath.c_str();
 }
 
+std::string getVarDecl(nl::json var_decl){
+    std::ostringstream var_decl_str;
+    if(!var_decl["type"]["qualifier"].is_null()){
+        var_decl_str << (std::string)var_decl["type"]["qualifier"] << " ";
+    }
+    var_decl_str << (std::string)var_decl["type"]["base_type"] << " ";
+    var_decl_str << (std::string)var_decl["name"];
+    if (var_decl["type"]["type_kind"] == "array_type") {
+        for(int i = 0; i < var_decl["type"]["array_dims"]; i++)
+            var_decl_str << "[" << var_decl["type"]["array_dim_value"][i] << "]";
+    } else if (var_decl["type"]["type_kind"] == "incomplete_array_type") {
+        var_decl_str << "[]";
+    }
+    if(!var_decl["init"].is_null()){
+        var_decl_str << "= " << (std::string)var_decl["init"];
+    }
+    var_decl_str << ";\n";
+    return var_decl_str.str();
+}
+
 std::string generateISPCKernel(std::string name, nl::json metadata) {
-<<<<<<< HEAD
-    std::string ispc_grid_for = R"(
-        for(blockIdx.z = 0; blockIdx.z < gridDim.z; blockIdx.z++){
-            for(blockIdx.y = 0; blockIdx.y < gridDim.y; blockIdx.y++){
-                for(blockIdx.x = 0; blockIdx.x < gridDim.x; blockIdx.x++){
-    )";
-
-    std::string ispc_block_for = R"(
-        for(threadIdx.z = 0; threadIdx.z < blockDim.z; threadIdx.z++){
-            for(threadIdx.y = 0; threadIdx.y < blockDim.y; threadIdx.y++){
-                for(threadIdx.x = programIndex; threadIdx.x < blockDim.x; threadIdx.x+= programCount){
-    )";
-
-    std::string ispc_for_end = R"(
-                }
-            }
-        }
-    )";
-=======
     std::string ispc_grid_start = "ISPC_GRID_START\n";
     std::string ispc_block_start = "ISPC_BLOCK_START\n";
     std::string ispc_block_end = "ISPC_BLOCK_END\n";
     std::string ispc_grid_end = "ISPC_GRID_END\n";
->>>>>>> baseline
 
     std::ostringstream function_string;
     function_string << "export ";
     function_string << "void " << name << R"(
-        (uniform Dim3& gridDim, uniform Dim3& blockDim, 
-         uniform unsigned int32 shared_memory_size
+        (const uniform Dim3& gridDim, const uniform Dim3& blockDim, 
+         const uniform unsigned int32 shared_memory_size
         )";
 
-    // shared mem
-    for (std::string shmem : metadata["shmem"]) {
-        function_string << ", uniform " << shmem << '\n';
-    }
-
     // params
-    for (std::string param : metadata["params"]) {
-        function_string << ", uniform " << param << '\n';
+    if(!metadata["params"].is_null()){
+        for (std::string param : metadata["params"]) {
+            function_string << ", uniform " << param << '\n';
+        }
     }
 
     function_string << "){\n";
-
-    function_string << "unsigned int<3> blockIdx, threadIdx;\n";
-<<<<<<< HEAD
-    function_string << ispc_grid_for;
-=======
+    // shared memory
+    if (!metadata["shmem"].is_null()) {
+        for (auto &var_decl : metadata["shmem"]) {
+            function_string << "uniform ";
+            function_string << getVarDecl(var_decl);
+        }
+    }
+    // extern shared memory
+    if (!metadata["extern_shmem"].is_null()) {
+        for (auto &var_decl : metadata["extern_shmem"]) {
+            function_string << "uniform " << (std::string)var_decl["type"]["base_type"]
+                            << " * uniform " << var_decl["name"]
+                            << " = uniform new uniform "
+                            << (std::string)var_decl["type"]["base_type"];
+            if (var_decl["type"]["type_kind"] == "IncompleteType") {
+                function_string << "[shared_memory_size]";
+            }
+            function_string << ";\n";
+        }
+    }
+    
     function_string << ispc_grid_start;
->>>>>>> baseline
-
     // body
     for (auto &[block, body] : metadata["body"].items()) {
         function_string << ispc_block_start;
+        for (auto &[name, decl] : metadata["context"].items()) {
+            function_string << getVarDecl(decl);
+        }
         for (std::string line : body) {
             function_string << line << '\n';
         }
@@ -131,6 +145,7 @@ std::string generateISPCTranslationUnit(nl::json metadata) {
     // generate macros
     tu << R"(
         #define ISPC_GRID_START                                                        \
+            Dim3 blockIdx, threadIdx;                                                  \
             for (blockIdx.z = 0; blockIdx.z < gridDim.z; blockIdx.z++) {               \
                 for (blockIdx.y = 0; blockIdx.y < gridDim.y; blockIdx.y++) {           \
                     for (blockIdx.x = 0; blockIdx.x < gridDim.x; blockIdx.x++) {
@@ -175,7 +190,7 @@ std::string generateISPCTranslationUnit(nl::json metadata) {
         tu << "uniform " << var_decl << '\n';
     }
 
-    for (auto &[name, data] : metadata["function"].items()) {
+    for (auto &[name, data] : metadata["functions"].items()) {
         if (data["exported"])
             tu << generateISPCKernel(name, data) << '\n';
         else
@@ -193,6 +208,10 @@ llvm::cl::OptionCategory spmdfy_options("spmdfy -help");
 llvm::cl::opt<std::string>
     output_filename("o", llvm::cl::desc("Specify Ouput Filename"),
                     llvm::cl::cat(spmdfy_options));
+llvm::cl::opt<bool>
+    dump_json("dump-json",
+              llvm::cl::desc("Jump JSON description of the Translation Unit"),
+              llvm::cl::cat(spmdfy_options));
 cl::opt<bool> verbosity("v",
                         cl::desc("Show commands to run and use verbose output"),
                         cl::value_desc("v"), cl::cat(spmdfy_options));
@@ -205,11 +224,6 @@ int main(int argc, const char **argv) {
                    options_parser.getSourcePathList());
     std::vector<std::string> file_sources = options_parser.getSourcePathList();
     std::error_code error_code;
-    std::string filename = (output_filename == "")
-                               ? ("./" + getFileNameFromSource(file_sources[0]))
-                               : output_filename;
-    llvm::errs() << "Writing to : " << filename << '\n';
-    std::fstream out_file(filename, std::ios_base::out);
 
     auto &src = file_sources[0];
     std::string source_abs_path = getAbsoluteFilePath(src, error_code);
@@ -245,10 +259,17 @@ int main(int argc, const char **argv) {
     tool.run(newFrontendActionFactory(&action).get());
     nl::json metadata = action.getMetadata();
 
-    out_file << generateISPCTranslationUnit(metadata);
-    out_file.close();
-
-    if (spmdfy::format::format(filename))
-        llvm::errs() << "Unable to format\n";
+    if (dump_json) {
+        llvm::outs() << metadata.dump(4) << '\n';
+    }
+    if (output_filename != "") {
+        std::string filename = output_filename;
+        llvm::errs() << "Writing to : " << filename << '\n';
+        std::fstream out_file(filename, std::ios_base::out);
+        out_file << generateISPCTranslationUnit(metadata);
+        out_file.close();
+        if (spmdfy::format::format(filename))
+            llvm::errs() << "Unable to format\n";
+    }
     return 0;
 }

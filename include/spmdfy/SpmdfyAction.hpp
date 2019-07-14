@@ -53,7 +53,7 @@ class SpmdfyAction : public clang::ASTFrontendAction,
   private:
     std::unique_ptr<mat::MatchFinder> m_finder;
     nl::json m_function_metadata;
-    SpmdfyStmtVisitor *stmt_visitor;
+    SpmdfyStmtVisitor *m_stmt_visitor;
 };
 
 } // namespace spmdfy
