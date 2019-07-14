@@ -1,91 +1,127 @@
 {
-    "records": {
-        "struct_1": {
-            "variables": {
-                "name_1": {
+    "constant_memory": [
+        {
+            "name": "name",
+            "type": "base type",
+            "type_kind": "{Built-in | array_type | incomplete_array_type}",
+            "[qualifier]": "{const}"
+        },
+        {
+            "...": "..."
+        }
+    ],
+    "records": [
+        {
+            "name": "struct_1",
+            "variables": [
+                {
+                    "name": "name",
                     "type": "base type",
-                    "type_kind": "{array_type | incomplete_array_type}",
-                    "qualifier": "{const | optional}",
-                    "init": "[optional]"
+                    "type_kind": "{Built-in | array_type | incomplete_array_type}",
+                    "[qualifier]": "{const}"
                 },
-                "...": "..."
-            },
+                {
+                    "...": "..."
+                }
+            ],
             "ctors": {
                 "ctor_name": {
-                    "params": {
-                        "name_1": {
+                    "params": [
+                        {
+                            "name": "name",
                             "type": "base type",
-                            "type_kind": "{array_type | incomplete_array_type}",
-                            "[array_size]": "integer value",
-                            "qualifier": "{const | optional}",
-                            "init": "[optional]"
+                            "type_kind": "{Built-in | array_type | incomplete_array_type}",
+                            "[qualifier]": "{const}"
                         },
-                        "...": "..."
-                    },
+                        {
+                            "...": "..."
+                        }
+                    ],
                     "body": "..."
                 }
             },
             "methods": {
                 "method_name": {
                     "return_type": "type",
-                    "params": {
-                        "param_1": {
-                            "name_1": {
-                                "type": "base type",
-                                "type_kind": "{array_type | incomplete_array_type}",
-                                "qualifier": "{const | optional}",
-                                "[init]": "optional"
-                            },
-                            "...": "..."
+                    "params": [
+                        {
+                            "name": "name",
+                            "type": "base type",
+                            "type_kind": "{Built-in | Array_type | incomplete_array_type}",
+                            "[qualifier]": "{const}"
                         },
-                        "...": "..."
-                    },
+                        {
+                            "...": "..."
+                        }
+                    ],
                     "body": [
                         "statment_1",
                         "..."
                     ]
                 }
             }
+        },
+        {
+            "...": "..."
         }
-    },
+    ],
     "functions": {
         "kernel": {
             "return_type": "void",
-            "params": {
-                "param_1": {
-                    "name_1": {
-                        "type": "base type",
-                        "type_kind": "{array_type | incomplete_array_type}",
-                        "qualifier": "{const | optional}",
-                        "[init]": "optional"
-                    },
+            "params": [
+                {
+                    "name": "name",
+                    "type": {
+                        "base_type": "{Built-in type | Records}",
+                        "type_kind": "{Built-in | array_type}",
+                        "[array_dims]": "integer_value",
+                        "[array_dim_value]": [
+                            "integer_values"
+                        ],
+                        "[array_size]": "integer value"
+                    }
+                },
+                {
                     "...": "..."
                 }
-            },
+            ],
             "shmem": {
                 "name": {
-                    "type": "{Built-in type | Records}",
-                    "type_kind": "{Built-in | array_type}",
-                    "[array_dims]": "integer_value",
-                    "[array_dim_value]" : ["integer_values"],
-                    "[array_size]": "integer value"
+                    "type": {
+                        "base_type": "{Built-in type | Records}",
+                        "type_kind": "{Built-in | array_type}",
+                        "[array_dims]": "integer_value",
+                        "[array_dim_value]": [
+                            "integer_values"
+                        ],
+                        "[array_size]": "integer value"
+                    }
                 }
             },
             "extern_shmem": {
                 "name": {
-                    "type": "{Built-in type | Records}",
-                    "type_kind": "{Built-in | incomplete_array_type}"
+                    "type": {
+                        "base type": "{Built-in | Records}",
+                        "type_kind": "{Built-in | incomplete_array_type}",
+                        "[qualifier]": "{const | static}"
+                    }
                 }
             },
-            "context": {
-                "name_1": {
-                    "type": "base type",
-                    "type_kind": "{array_type | incomplete_array_type}",
-                    "qualifier": "{const | static | optional}",
-                    "[init]": "expression"
+            "context": [
+                {
+                    "name": "name",
+                    "type": {
+                        "base_type": "{Built-in type | Records}",
+                        "type_kind": "{Built-in | array_type | incomplete_array_type}",
+                        "[array_dim]": "integer_value",
+                        "[array_size]": "integer value",
+                        "[init]": "init"
+                    }
                 },
-                "...": "..."
-            },
+                {
+                    "...": "..."
+                }
+            ],
             "body": [
                 [
                     "statement_1",
@@ -98,44 +134,59 @@
         },
         "device_function": {
             "return_type": "{Built-in Type | ...}",
-            "shmem": {
-                "name": {
-                    "type": "{Built-in type | Records}",
-                    "type_kind": "{Built-in | array_type}",
-                    "[array_dim]": "integer_value",
-                    "[array_size]": "integer value"
+            "shmem": [
+                {
+                    "name": "name",
+                    "type": {
+                        "base_type": "{Built-in type | Records}",
+                        "type_kind": "{Built-in | array_type}",
+                        "[array_dim]": "integer_value",
+                        "[array_size]": "integer value"
+                    }
                 }
-            },
-            "extern_shmem": {
-                "name": {
-                    "type": "{Built-in type | Records}",
-                    "type_kind": "{Built-in | incomplete_array_type}"
+            ],
+            "extern_shmem": [
+                {
+                    "name": "name",
+                    "type": {
+                        "base_type": "{Built-in type | Records}",
+                        "type_kind": "{Built-in | array_type}"
+                    }
                 }
-            },
-            "params": {
-                "param_1": {
-                    "name_1": {
-                        "type": "base type",
-                        "type_kind": "{array_type | incomplete_array_type}",
-                        "[qualifier]": "{const}",
-                        "[init]": "optional"
-                    },
-                    "...": "..."
+            ],
+            "params": [
+                {
+                    "name": "name",
+                    "type": {
+                        "base_type": "{Built-in type | Records}",
+                        "type_kind": "{Built-in | array_type}",
+                        "[array_dim]": "integer_value",
+                        "[array_size]": "integer value"
+                    }
                 },
-                "body": [
-                    "statment",
-                    "..."
-                ]
+                {
+                    "...": "..."
+                }
+            ],
+            "body": [
+                "statment",
+                "..."
+            ]
+        }
+    },
+    "globals": [
+        {
+            "name": "name",
+            "type": {
+                "base_type": "{Built-in type | Records}",
+                "type_kind": "{Built-in | array_type}",
+                "[array_dim]": "integer_value",
+                "[array_size]": "integer value",
+                "[init]": "init"
             }
         },
-        "globals": {
-            "name_1": {
-                "type": "base type",
-                "type_kind": "{array_type | incomplete_array_type}",
-                "[qualifier]": "{const, static}",
-                "[init]": "expression"
-            },
-            "..." : "..."
+        {
+            "...": "..."
         }
-    }
+    ]
 }
