@@ -2,7 +2,7 @@
 #include <cuda_runtime.h>
 #include "shared_memory.cuh"
 #include "shared_memory_ispc.h"
-#include "cuda_utils.h"
+#include "cuda_utils.cuh"
 
 void executeCUDA(int *a, int *r, int *d, int n) {
     int *d_d;

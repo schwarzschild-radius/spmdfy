@@ -12,6 +12,6 @@ shared_memory.o: shared_memory.cu
 shared_memory_ispc.o: shared_memory.ispc
 	ispc -h shared_memory_ispc.h -o shared_memory_ispc.o --target=avx2-i32x8 shared_memory.ispc
 shared_memory.ispc: shared_memory.cu
-	${SPMDFY} -o shared_memory.ispc shared_memory.cu
+	${SPMDFY} -o shared_memory.ispc -dump-json shared_memory.cu
 clean:
-	rm shared_memory.ispc shmem *.o
+	rm shared_memory.ispc shmem *.o *_ispc.h
