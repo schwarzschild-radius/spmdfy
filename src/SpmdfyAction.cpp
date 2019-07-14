@@ -59,14 +59,15 @@ bool SpmdfyAction::cudaKernelFunction(
                 sourceDump(sm, lang_opt, param));
         }
     }
-
+    // 4. body
     clang::Stmt *body = kernel_function->getBody();
     if (body) {
-        stmt_visitor->Visit(body);
+        m_stmt_visitor->Visit(body);
     }
-    metadata["body"] = stmt_visitor->getFunctionBody();
-    metadata["shmem"] = stmt_visitor->getSharedMem();
-    m_function_metadata["function"][name] = metadata;
+    metadata["body"] = m_stmt_visitor->getFunctionBody();
+    metadata["shmem"] = m_stmt_visitor->getSharedMem();
+    metadata["extern_shmem"] = m_stmt_visitor->getExternSharedMem();
+    m_function_metadata["functions"][name] = metadata;
     return true;
 }
 
@@ -102,9 +103,10 @@ bool SpmdfyAction::cudaDeviceFunction(
     }
     clang::Stmt *body = device_function->getBody();
     if (body) {
-        stmt_visitor->Visit(body);
+        m_stmt_visitor->Visit(body);
     }
-    m_function_metadata["function"][name] = metadata;
+    metadata["body"] = m_stmt_visitor->getFunctionBody();
+    m_function_metadata["functions"][name] = metadata;
     return true;
 }
 
@@ -137,7 +139,7 @@ bool SpmdfyAction::globalDeclarations(
 }
 
 void SpmdfyAction::run(const mat::MatchFinder::MatchResult &result) {
-    stmt_visitor = new SpmdfyStmtVisitor(*result.SourceManager);
+    m_stmt_visitor = new SpmdfyStmtVisitor(*result.SourceManager);
     if (globalDeclarations(result))
         return;
     if (cudaKernelFunction(result))

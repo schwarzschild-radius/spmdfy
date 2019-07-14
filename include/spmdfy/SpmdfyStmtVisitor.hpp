@@ -31,8 +31,8 @@ class SpmdfyStmtVisitor
 
     // getters
     nl::json getFunctionBody() { return m_function_body; }
-    std::vector<std::string> getSharedMem() { return m_shmem; }
-
+    nl::json getSharedMem() { return m_shmem; }
+    nl::json getExternSharedMem() { return m_extern_shmem; }
     // visitors
     clang::Stmt *VisitCompoundStmt(clang::CompoundStmt *C);
     clang::Stmt *VisitCallExpr(clang::CallExpr *call_expr);
@@ -43,7 +43,8 @@ class SpmdfyStmtVisitor
     clang::SourceManager &m_sm;
     clang::LangOptions m_lang_opt;
     nl::json m_function_body;
-    std::vector<std::string> m_shmem;
+    nl::json m_shmem;
+    nl::json m_extern_shmem;
     nl::json m_atomics;
     int m_block = 0;
 };
