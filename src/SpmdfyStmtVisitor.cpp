@@ -116,6 +116,7 @@ clang::Stmt *SpmdfyStmtVisitor::VisitDeclStmt(clang::DeclStmt *decl_stmt) {
                     return decl_stmt;
                 }
                 m_shmem.push_back(var_metadata);
+                return decl_stmt;
             }
             llvm::errs() << sourceDump(m_sm, m_lang_opt, decl_stmt) << '\n';
             if (m_scope == 0) {

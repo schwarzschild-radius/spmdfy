@@ -94,7 +94,7 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
     if (!metadata["extern_shmem"].is_null()) {
         for (auto &var_decl : metadata["extern_shmem"]) {
             function_string << "uniform " << (std::string)var_decl["type"]["base_type"]
-                            << " * uniform " << var_decl["name"]
+                            << " * uniform " << (std::string)var_decl["name"]
                             << " = uniform new uniform "
                             << (std::string)var_decl["type"]["base_type"];
             if (var_decl["type"]["type_kind"] == "IncompleteType") {
