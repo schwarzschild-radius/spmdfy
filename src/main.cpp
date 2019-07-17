@@ -42,23 +42,23 @@ std::string getAbsoluteFilePath(const std::string &sFile, std::error_code &EC) {
     return fileAbsPath.c_str();
 }
 
-std::string getVarDecl(nl::json var_decl){
+std::string getVarDecl(nl::json var_decl) {
     std::ostringstream var_decl_str;
-    if(!var_decl["type"]["qualifier"].is_null()){
+    if (!var_decl["type"]["qualifier"].is_null()) {
         var_decl_str << (std::string)var_decl["type"]["qualifier"] << " ";
     }
     var_decl_str << (std::string)var_decl["type"]["base_type"] << " ";
     var_decl_str << (std::string)var_decl["name"];
     if (var_decl["type"]["type_kind"] == "array_type") {
-        for(int i = 0; i < var_decl["type"]["array_dims"]; i++)
-            var_decl_str << "[" << var_decl["type"]["array_dim_value"][i] << "]";
+        for (int i = 0; i < var_decl["type"]["array_dims"]; i++)
+            var_decl_str << "[" << var_decl["type"]["array_dim_value"][i]
+                         << "]";
     } else if (var_decl["type"]["type_kind"] == "incomplete_array_type") {
         var_decl_str << "[]";
     }
-    if(!var_decl["init"].is_null()){
+    if (!var_decl["init"].is_null()) {
         var_decl_str << "= " << (std::string)var_decl["init"];
     }
-    var_decl_str << ";\n";
     return var_decl_str.str();
 }
 
@@ -76,7 +76,7 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
         )";
 
     // params
-    if(!metadata["params"].is_null()){
+    if (!metadata["params"].is_null()) {
         for (std::string param : metadata["params"]) {
             function_string << ", uniform " << param << '\n';
         }
@@ -87,13 +87,14 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
     if (!metadata["shmem"].is_null()) {
         for (auto &var_decl : metadata["shmem"]) {
             function_string << "uniform ";
-            function_string << getVarDecl(var_decl);
+            function_string << getVarDecl(var_decl) << ";\n";
         }
     }
     // extern shared memory
     if (!metadata["extern_shmem"].is_null()) {
         for (auto &var_decl : metadata["extern_shmem"]) {
-            function_string << "uniform " << (std::string)var_decl["type"]["base_type"]
+            function_string << "uniform "
+                            << (std::string)var_decl["type"]["base_type"]
                             << " * uniform " << var_decl["name"]
                             << " = uniform new uniform "
                             << (std::string)var_decl["type"]["base_type"];
@@ -103,13 +104,13 @@ std::string generateISPCKernel(std::string name, nl::json metadata) {
             function_string << ";\n";
         }
     }
-    
+
     function_string << ispc_grid_start;
     // body
     for (auto &[block, body] : metadata["body"].items()) {
         function_string << ispc_block_start;
         for (auto &[name, decl] : metadata["context"].items()) {
-            function_string << getVarDecl(decl);
+            function_string << getVarDecl(decl) << ";\n";
         }
         for (std::string line : body) {
             function_string << line << '\n';
@@ -137,6 +138,29 @@ std::string generateISPCFunction(std::string name, nl::json metadata) {
 
     function_string << "}\n";
     return function_string.str();
+}
+
+std::string generateConstructor(const std::string &name,
+                                const nl::json &metadata) {
+    std::ostringstream ctor_str;
+    for (auto ctor : metadata["ctors"]) {
+        std::string ctor_name = name;
+        for (auto param : metadata["params"]) {
+            ctor_name += "_" + (std::string)params["name"];
+        }
+        ctor_str << ctor_name << "(";
+        if (metadata["params"].size() != 0) {
+            ctor_str << getVarDecl(metadata["params"][0]);
+            for (auto param = metadata["params"].begin() + 1;
+                 param != metadata["params"].end(); params++) {
+                ctor_str << ", " << getVarDecl(*param);
+            }
+        }
+        ctor_str << "){\n";
+        ctor_str << "return this;\n";
+        ctor_str << "}\n";
+    }
+    return ctor_str.str();
 }
 
 std::string generateISPCTranslationUnit(nl::json metadata) {
@@ -185,6 +209,20 @@ std::string generateISPCTranslationUnit(nl::json metadata) {
             int x, y, z;
         };
     )";
+
+    tu << "// Records\n";
+
+    for (auto record : metadata["records"]) {
+        tu << "// Struct " << (std::string)record["name"] << '\n';
+        tu << "struct " << (std::string)record["name"] << "{\n";
+        for (auto field : record["fields"]) {
+            tu << getVarDecl(field) << ";\n";
+        }
+        tu << "};\n";
+        tu << "// Struct " << (std::string)record["name"] << " End" << '\n';
+    }
+
+    tu << "// Records end\n";
 
     for (std::string var_decl : metadata["globals"]) {
         tu << "uniform " << var_decl << '\n';

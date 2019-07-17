@@ -13,12 +13,13 @@
     "records": [
         {
             "name": "struct_1",
-            "variables": [
+            "fields": [
                 {
                     "name": "name",
                     "type": "base type",
                     "type_kind": "{Built-in | array_type | incomplete_array_type}",
-                    "[qualifier]": "{const}"
+                    "[qualifier]": "const",
+                    "[init]" : "init"
                 },
                 {
                     "...": "..."

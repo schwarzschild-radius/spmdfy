@@ -75,8 +75,8 @@ clang::Stmt *SpmdfyStmtVisitor::VisitDeclStmt(clang::DeclStmt *decl_stmt) {
     for (auto dgr : decl_stmt->getDeclGroup()) {
         if (llvm::isa<clang::VarDecl>(dgr)) {
             auto var_decl = llvm::cast<clang::VarDecl>(dgr);
-            std::string var_name = var_decl->getNameAsString();
             nl::json var_metadata;
+            std::string var_name = var_decl->getNameAsString();
             var_metadata["name"] = var_name;
             clang::QualType var_type = var_decl->getTypeSourceInfo()->getType();
             var_metadata["type"]["base_type"] = var_type.getAsString();

@@ -13,12 +13,14 @@ std::unique_ptr<clang::ASTConsumer> SpmdfyAction::newASTConsumer() {
     // match device function
     m_finder->addMatcher(
         mat::functionDecl(mat::hasAttr(clang::attr::CUDADevice),
-                          mat::isExpansionInMainFile(), mat::isDefinition())
+                          mat::isExpansionInMainFile(), mat::isDefinition(),
+                          mat::unless(mat::cxxMethodDecl()))
             .bind("cudaDeviceFunction"),
         this);
     // match global decls
     m_finder->addMatcher(
-        mat::varDecl(mat::isExpansionInMainFile(), mat::hasGlobalStorage(), mat::hasParent(mat::translationUnitDecl()))
+        mat::varDecl(mat::isExpansionInMainFile(), mat::hasGlobalStorage(),
+                     mat::hasParent(mat::translationUnitDecl()))
             .bind("globalDeclarations"),
         this);
     // match struct types
@@ -164,18 +166,42 @@ bool SpmdfyAction::structType(const mat::MatchFinder::MatchResult &result) {
     }
     clang::SourceManager &sm = *result.SourceManager;
     clang::LangOptions lang_opt;
-    llvm::errs() << "Matcher: structType\n";
+    llvm::errs() << "StructType\n";
     llvm::errs() << struct_type->getNameAsString() << '\n';
+    nl::json metadata;
+    metadata["name"] = struct_type->getNameAsString();
     llvm::errs() << sourceDump(sm, lang_opt, struct_type) << '\n';
-    for(auto i = struct_type->field_begin(); i != struct_type->field_end(); i++){
-        llvm::errs() << sourceDump(sm, lang_opt, *i) << '\n';
+    // members
+    llvm::errs() << "Fields\n";
+    for (auto field = struct_type->field_begin();
+         field != struct_type->field_end(); field++) {
+        nl::json field_metadata;
+        std::string field_name = (*field)->getNameAsString();
+        field_metadata["name"] = field_name;
+        clang::QualType field_type = (*field)->getTypeSourceInfo()->getType();
+        field_metadata["type"]["base_type"] = field_type.getAsString();
+        field_metadata["type"]["type_kind"] = "Built-in";
+        if (field_type.hasQualifiers())
+            field_metadata["type"]["qualifiers"] =
+                field_type.getQualifiers().getAsString();
+        llvm::errs() << sourceDump(sm, lang_opt, *field) << '\n';
+        metadata["fields"].push_back(field_metadata);
     }
-    std::string struct_name = struct_type->getNameAsString();
-    auto& struct_handler = m_function_metadata["structs"][struct_name];
-    struct_handler = {};
-    for(auto i = struct_type->field_begin(); i != struct_type->field_end(); i++){
-        struct_handler["fields"].push_back(sourceDump(sm, lang_opt, *i));
+
+    // ctors
+    for (auto ctor = struct_type->ctor_begin(); ctor != struct_type->ctor_end();
+         ctor++) {
+        nl::json ctor_decl;
+        auto body = (*ctor)->getBody();
+        llvm::errs() << sourceDump(sm, lang_opt, body) << '\n';
+        for (auto param_idx = 0; param_idx < (*ctor)->getNumParams();
+         param_idx++) {
+            clang::ParmVarDecl* param = (*ctor)->getParamDecl(param_idx);
+            ctor_decl["params"].push_back(sourceDump(sm, lang_opt, param));
+        }
+        metadata["ctors"].push_back(ctor_decl);
     }
+    m_function_metadata["records"].push_back(metadata);
     return true;
 }
 
@@ -188,7 +214,7 @@ void SpmdfyAction::run(const mat::MatchFinder::MatchResult &result) {
     if (cudaDeviceFunction(result))
         return;
     if (structType(result))
-            return;
+        return;
 }
 
 } // namespace spmdfy
