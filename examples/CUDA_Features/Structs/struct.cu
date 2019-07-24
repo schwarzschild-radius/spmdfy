@@ -1,10 +1,7 @@
-#include <cuda_runtime.h>
+#include <iostream>
 
-struct A{
-    __device__ __host__ A(int a){
-        this->a = a;
-    }
-    int a;
-    int b;
-    int *c;
-};
+int a = 0;
+bool b = 0;
+char c = 'a';
+unsigned int ui = 100;
+unsigned char uc = 'c';

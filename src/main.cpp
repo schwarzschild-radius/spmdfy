@@ -146,13 +146,13 @@ std::string generateConstructor(const std::string &name,
     for (auto ctor : metadata["ctors"]) {
         std::string ctor_name = name;
         for (auto param : metadata["params"]) {
-            ctor_name += "_" + (std::string)params["name"];
+            ctor_name += "_" + (std::string)param["type"];
         }
         ctor_str << ctor_name << "(";
         if (metadata["params"].size() != 0) {
             ctor_str << getVarDecl(metadata["params"][0]);
             for (auto param = metadata["params"].begin() + 1;
-                 param != metadata["params"].end(); params++) {
+                 param != metadata["params"].end(); param++) {
                 ctor_str << ", " << getVarDecl(*param);
             }
         }
@@ -201,6 +201,12 @@ std::string generateISPCTranslationUnit(nl::json metadata) {
         #define SYNCTHREADS()                                                          \
             ISPC_BLOCK_END                                                             \
             ISPC_BLOCK
+
+        #define ENUM(x, y) x##_##y
+
+        #define NAMESPACE(x, y) x##_##y
+
+        #define NAMESPACE3(x, y, z) x##_##y##_##z
     )" << '\n';
 
     // generate Dim3 struct
@@ -209,6 +215,14 @@ std::string generateISPCTranslationUnit(nl::json metadata) {
             int x, y, z;
         };
     )";
+
+    tu << "// Enums\n";
+    for (auto enumerator : metadata["enum"]){
+        for(auto field : enumerator["fields"]){
+            tu << "uniform int32 " << (std::string)enumerator["name"] << "_";
+            tu << (std::string)field["name"] << " = " << (std::string)field["init"] << ";\n";
+        }
+    }
 
     tu << "// Records\n";
 
@@ -219,13 +233,27 @@ std::string generateISPCTranslationUnit(nl::json metadata) {
             tu << getVarDecl(field) << ";\n";
         }
         tu << "};\n";
-        tu << "// Struct " << (std::string)record["name"] << " End" << '\n';
+
+        tu << "// Constructors";
+
+        /* for (auto ctor : record["ctors"]){
+            tu << (std::string)record["name"] << " " << std::string(name) << "( ";
+                tu << std::string(name) << " &this";
+                for(auto param : ctor["params"]){
+                    tu << ", " << getVarDecl(param);
+                }
+            tu << "){\n";
+            tu << ctor["body"];
+            tu << "}\n";
+        } */
+
+        tu << "// Struct " << (std::string)record["name"] << " end" << '\n';
     }
 
     tu << "// Records end\n";
 
-    for (std::string var_decl : metadata["globals"]) {
-        tu << "uniform " << var_decl << '\n';
+    for (auto var_decl : metadata["globals"]) {
+        tu << "uniform " << getVarDecl(var_decl) << ";\n";
     }
 
     for (auto &[name, data] : metadata["functions"].items()) {
@@ -261,6 +289,10 @@ int main(int argc, const char **argv) {
     ClangTool tool(options_parser.getCompilations(),
                    options_parser.getSourcePathList());
     std::vector<std::string> file_sources = options_parser.getSourcePathList();
+    if(file_sources.empty()){
+        llvm::cl::PrintHelpMessage();
+        return 1;
+    }
     std::error_code error_code;
 
     auto &src = file_sources[0];
