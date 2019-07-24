@@ -1,13 +1,27 @@
 {
     "constant_memory": [
         {
-            "name": "name",
+            "name": "cm_1",
             "type": "base type",
             "type_kind": "{Built-in | array_type | incomplete_array_type}",
             "[qualifier]": "{const}"
         },
         {
             "...": "..."
+        }
+    ],
+    "enum" : [
+        {
+            "name" : "enum_1",
+            "fields" : [
+                {
+                    "name" : "field_1",
+                    "[init]" : "{integer_value}"
+                },
+                {
+                    "..." : "..."
+                }
+            ]
         }
     ],
     "records": [
