@@ -30,6 +30,8 @@ std::unique_ptr<clang::ASTConsumer> SpmdfyAction::newASTConsumer() {
                                mat::hasAttr(clang::attr::CUDADevice))))
             .bind("structType"),
         this);
+    m_finder->addMatcher(
+        mat::enumDecl(mat::isExpansionInMainFile()).bind("EnumType"), this);
     return m_finder->newASTConsumer();
 }
 
@@ -127,33 +129,50 @@ bool SpmdfyAction::cudaDeviceFunction(
 bool SpmdfyAction::globalDeclarations(
     const mat::MatchFinder::MatchResult &result) {
     llvm::StringRef ref("globalDeclarations");
-    auto *global_variable = result.Nodes.getNodeAs<clang::VarDecl>(ref);
-    if (!global_variable) {
+    auto *var_decl = result.Nodes.getNodeAs<clang::VarDecl>(ref);
+    if (!var_decl) {
         return false;
     }
     llvm::errs() << ref.str() << '\n';
     clang::SourceManager &sm = *result.SourceManager;
-    clang::LangOptions lang_opt;
-    if (global_variable->hasAttr<clang::CUDAConstantAttr>()) {
+    clang::LangOptions lang_opt = result.Context->getLangOpts();
+    for(auto i : lang_opt.ModuleFeatures){
+        llvm::errs() << i << '\n';
+    }
+    if (var_decl->hasAttr<clang::CUDAConstantAttr>()) {
         llvm::errs() << sourceDump(sm, lang_opt,
-                                   global_variable->getTypeSpecStartLoc(),
-                                   global_variable->getSourceRange().getEnd())
+                                   var_decl->getTypeSpecStartLoc(),
+                                   var_decl->getSourceRange().getEnd())
                      << '\n';
         m_function_metadata["globals"].push_back(
-            sourceDump(sm, lang_opt, global_variable->getTypeSpecStartLoc(),
-                       global_variable->getSourceRange().getEnd()) +
+            sourceDump(sm, lang_opt, var_decl->getTypeSpecStartLoc(),
+                       var_decl->getSourceRange().getEnd()) +
             ";");
     } else {
-        llvm::errs() << sourceDump(sm, lang_opt,
-                                   global_variable->getSourceRange().getBegin(),
-                                   global_variable->getSourceRange().getEnd())
-                     << '\n';
-        llvm::errs() << global_variable->getNameAsString() << '\n';
-        m_function_metadata["globals"].push_back(
-            sourceDump(sm, lang_opt,
-                       global_variable->getSourceRange().getBegin(),
-                       global_variable->getSourceRange().getEnd()) +
-            ";");
+        nl::json var_metadata;
+        var_metadata["name"] = var_decl->getNameAsString();
+        var_decl->dump();
+        clang::QualType var_type = var_decl->getType();
+        var_type->dump();
+        std::string base_type = var_type.getCanonicalType().getAsString();
+/*         if(base_type == "_Bool"){
+            base_type = "bool";
+        }else if (base_type == "char"){
+            base_type = "int8";
+        } */
+        if(pm.Bool == 1){
+            llvm::errs() << "We are in c land?\n";
+        }
+        var_metadata["type"]["base_type"] = base_type;
+        var_metadata["type"]["type_kind"] = "Built-in";
+        if (var_type.hasQualifiers())
+            var_metadata["type"]["qualifiers"] =
+                var_type.getQualifiers().getAsString();
+        const clang::Expr *var_init = var_decl->getInit();
+        if (var_init) {
+            var_metadata["init"] = sourceDump(sm, lang_opt, var_init);
+        }
+        m_function_metadata["globals"].push_back(var_metadata);
     }
     return true;
 }
@@ -180,6 +199,7 @@ bool SpmdfyAction::structType(const mat::MatchFinder::MatchResult &result) {
         field_metadata["name"] = field_name;
         clang::QualType field_type = (*field)->getTypeSourceInfo()->getType();
         field_metadata["type"]["base_type"] = field_type.getAsString();
+        llvm::errs() << "Base Type: " << field_type.getAsString() << '\n';
         field_metadata["type"]["type_kind"] = "Built-in";
         if (field_type.hasQualifiers())
             field_metadata["type"]["qualifiers"] =
@@ -192,16 +212,48 @@ bool SpmdfyAction::structType(const mat::MatchFinder::MatchResult &result) {
     for (auto ctor = struct_type->ctor_begin(); ctor != struct_type->ctor_end();
          ctor++) {
         nl::json ctor_decl;
-        auto body = (*ctor)->getBody();
-        llvm::errs() << sourceDump(sm, lang_opt, body) << '\n';
         for (auto param_idx = 0; param_idx < (*ctor)->getNumParams();
-         param_idx++) {
-            clang::ParmVarDecl* param = (*ctor)->getParamDecl(param_idx);
+             param_idx++) {
+            clang::ParmVarDecl *param = (*ctor)->getParamDecl(param_idx);
             ctor_decl["params"].push_back(sourceDump(sm, lang_opt, param));
         }
+        auto body = (*ctor)->getBody();
+        llvm::errs() << sourceDump(sm, lang_opt, body) << '\n';
+        ctor_decl["body"] = sourceDump(sm, lang_opt, body);
         metadata["ctors"].push_back(ctor_decl);
     }
     m_function_metadata["records"].push_back(metadata);
+    return true;
+}
+
+bool SpmdfyAction::enumType(const mat::MatchFinder::MatchResult &result) {
+    llvm::StringRef ref("EnumType");
+    auto *enum_type = result.Nodes.getNodeAs<clang::EnumDecl>(ref);
+    if (!enum_type) {
+        return false;
+    }
+    nl::json metadata;
+    clang::SourceManager &sm = *result.SourceManager;
+    clang::LangOptions lang_opt;
+    llvm::errs() << "EnumType\n";
+    llvm::errs() << enum_type->getNameAsString() << '\n';
+    metadata["name"] = enum_type->getNameAsString();
+    for (auto e = enum_type->enumerator_begin();
+         e != enum_type->enumerator_end(); e++) {
+        nl::json field;
+        llvm::errs() << sourceDump(sm, lang_opt, e) << '\n';
+        field["name"] = (*e)->getNameAsString();
+        auto init_expr = (*e)->getInitExpr();
+        if (init_expr) {
+            field["init"] = sourceDump(sm, lang_opt, init_expr);
+            llvm::errs() << "Init Expr: " << sourceDump(sm, lang_opt, init_expr)
+                         << '\n';
+        } else
+            field["init"] =
+                std::to_string((int)*(*e)->getInitVal().getRawData());
+        metadata["fields"].push_back(field);
+    }
+    m_function_metadata["enum"].push_back(metadata);
     return true;
 }
 
@@ -214,6 +266,8 @@ void SpmdfyAction::run(const mat::MatchFinder::MatchResult &result) {
     if (cudaDeviceFunction(result))
         return;
     if (structType(result))
+        return;
+    if (enumType(result))
         return;
 }
 
