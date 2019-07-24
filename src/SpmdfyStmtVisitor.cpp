@@ -58,18 +58,6 @@ clang::Stmt *SpmdfyStmtVisitor::VisitCallExpr(clang::CallExpr *call_expr) {
     return call_expr;
 }
 
-clang::QualType getBaseType(clang::DeclaratorDecl *decl) {
-    clang::TypeSourceInfo *type_info = decl->getTypeSourceInfo();
-    clang::QualType type = type_info->getType();
-    return type.getCanonicalType();
-}
-
-bool hasIncompleteType(clang::DeclaratorDecl *decl) {
-    clang::TypeSourceInfo *type_info = decl->getTypeSourceInfo();
-    clang::QualType type = type_info->getType();
-    return type->isIncompleteType();
-}
-
 clang::Stmt *SpmdfyStmtVisitor::VisitDeclStmt(clang::DeclStmt *decl_stmt) {
     llvm::errs() << "Visiting Decl Statement\n";
     for (auto dgr : decl_stmt->getDeclGroup()) {
