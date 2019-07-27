@@ -1,0 +1,2 @@
+add_subdirectory(Atomic)
+add_subdirectory(Shared_Memory)
