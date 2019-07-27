@@ -13,3 +13,16 @@ A transpiler from CUDA to ISPC using libTooling
 
 ## Usage
     ./spmdfy ../examples/transpose/transpose.cu -o transpose.ispc
+
+## Feature List
+
+- [ ] Coming Soon
+
+## Test List
+List of tests that are currently working with the tool.
+
+- [x] CUDA_Features/Shared_Memory
+- [x] CUDA_Features/Atomic
+- [ ] Finit Difference
+- [x] Transpose
+- [ ] Saxpy
