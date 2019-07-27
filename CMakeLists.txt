@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5.1)
 
-project(spmdfy LANGUAGES CXX)
+project(spmdfy LANGUAGES CXX CUDA)
 
 find_package(LLVM REQUIRED 9 HINTS /usr/lib/llvm-9)
 
@@ -47,3 +47,7 @@ set(LLVM_LIBS LLVM)
 
 target_link_directories(spmdfy PRIVATE ${LLVM_LIBRARY_DIRS})
 target_link_libraries(spmdfy PRIVATE ${CLANG_LIBS} ${LLVM_LIBS})
+
+# examples
+enable_testing()
+add_subdirectory(examples)
