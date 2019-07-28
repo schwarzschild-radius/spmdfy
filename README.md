@@ -23,6 +23,6 @@ List of tests that are currently working with the tool.
 
 - [x] CUDA_Features/Shared_Memory
 - [x] CUDA_Features/Atomic
-- [ ] Finit Difference
+- [ ] Finite Difference
 - [x] Transpose
 - [ ] Saxpy
