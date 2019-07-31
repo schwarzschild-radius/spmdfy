@@ -14,7 +14,9 @@ add_executable(spmdfy src/main.cpp
                       src/SpmdfyAction.cpp
                       src/SpmdfyStmtVisitor.cpp
                       src/utils.cpp
-                      src/Format.cpp)
+                      src/Format.cpp
+                      src/CUDA2ISPC.cpp
+                      src/CommandLineOpts.cpp)
 target_include_directories(spmdfy PRIVATE include)
 target_include_directories(spmdfy PRIVATE third_party/json/include)
 set_target_properties(spmdfy PROPERTIES CXX_STANDARD 17

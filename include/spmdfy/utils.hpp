@@ -18,6 +18,14 @@ std::string sourceDump(const clang::SourceManager &sm,
                       node->getSourceRange().getEnd());
 }
 
+template<typename Iter>
+std::string strJoin(Iter b, Iter e, char sep=','){
+    std::string temp = *b;
+    while(++b != e){
+        temp += (std::to_string(sep) + " " + *b);
+    }
+    return temp;
+}
 } // namespace spmdfy
 
 #endif

@@ -16,4 +16,5 @@ std::string sourceDump(const clang::SourceManager &sm,
     return std::string(sm.getCharacterData(begin),
                        (sm.getCharacterData(e) - sm.getCharacterData(b)));
 }
+
 } // namespace spmdfy
