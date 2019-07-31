@@ -15,7 +15,8 @@ std::unique_ptr<clang::ASTConsumer> SpmdfyAction::newASTConsumer() {
             .bind("cudaDeviceFunction"),
         this);
     m_finder->addMatcher(
-        mat::varDecl(mat::isExpansionInMainFile(), mat::hasGlobalStorage(), mat::hasParent(mat::translationUnitDecl()))
+        mat::varDecl(mat::isExpansionInMainFile(), mat::hasGlobalStorage(),
+                     mat::hasParent(mat::translationUnitDecl()))
             .bind("globalDeclarations"),
         this);
     return m_finder->newASTConsumer();
@@ -50,13 +51,15 @@ bool SpmdfyAction::cudaKernelFunction(
          param_idx++) {
         auto param = kernel_function->getParamDecl(param_idx);
         clang::QualType param_type = param->getOriginalType();
-        llvm::errs() << param_type.getAsString() << ' ' << param_type->isPointerType() << '\n';
-        if(param_type->isPointerType()){
-            std::string pointee_type = param_type->getPointeeType().getAsString();
-            metadata["params"].push_back(pointee_type + " " + param->getNameAsString() + "[]");
-        }else{
-            metadata["params"].push_back(
-                sourceDump(sm, lang_opt, param));
+        llvm::errs() << param_type.getAsString() << ' '
+                     << param_type->isPointerType() << '\n';
+        if (param_type->isPointerType()) {
+            std::string pointee_type =
+                param_type->getPointeeType().getAsString();
+            metadata["params"].push_back(pointee_type + " " +
+                                         param->getNameAsString() + "[]");
+        } else {
+            metadata["params"].push_back(sourceDump(sm, lang_opt, param));
         }
     }
     // 4. body
@@ -99,8 +102,7 @@ bool SpmdfyAction::cudaDeviceFunction(
     for (auto param_idx = 0; param_idx < device_function->getNumParams();
          param_idx++) {
         auto param = device_function->getParamDecl(param_idx);
-        metadata["params"].push_back(
-            sourceDump(sm, lang_opt, param));
+        metadata["params"].push_back(sourceDump(sm, lang_opt, param));
     }
     clang::Stmt *body = device_function->getBody();
     if (body) {
@@ -114,28 +116,53 @@ bool SpmdfyAction::cudaDeviceFunction(
 bool SpmdfyAction::globalDeclarations(
     const mat::MatchFinder::MatchResult &result) {
     llvm::StringRef ref("globalDeclarations");
-    auto *global_variable = result.Nodes.getNodeAs<clang::VarDecl>(ref);
-    if (!global_variable) {
+    auto *var_decl = result.Nodes.getNodeAs<clang::VarDecl>(ref);
+    if (!var_decl) {
         return false;
     }
     clang::SourceManager &sm = *result.SourceManager;
-    clang::LangOptions lang_opt;
-    if (global_variable->hasAttr<clang::CUDAConstantAttr>()) {
-        llvm::errs() << sourceDump(sm, lang_opt,
-                                   global_variable->getTypeSpecStartLoc(),
-                                   global_variable->getSourceRange().getEnd())
-                     << '\n';
-        m_function_metadata["globals"].push_back(
-            sourceDump(sm, lang_opt, global_variable->getTypeSpecStartLoc(),
-                       global_variable->getSourceRange().getEnd()) +
-            ";");
-    } else {
-        m_function_metadata["globals"].push_back(
-            sourceDump(sm, lang_opt,
-                       global_variable->getSourceRange().getBegin(),
-                       global_variable->getSourceRange().getEnd()) +
-            ";");
+    clang::LangOptions lang_opt = result.Context->getLangOpts();
+    lang_opt.CPlusPlus = true;
+    clang::PrintingPolicy pm(lang_opt);
+    pm.Bool = true;
+    nl::json metadata;
+    std::string var_name = var_decl->getNameAsString();
+    metadata["name"] = var_name;
+    clang::QualType var_type = var_decl->getType();
+    std::string var_type_str = var_type.getAsString(pm);
+    if (var_type.hasQualifiers()) {
+        metadata["qualifiers"] = var_type.getQualifiers().getAsString();
+        var_type_str = var_type.getUnqualifiedType().getAsString();
     }
+    if (g_SpmdfyTypeMap.find(var_type_str) != g_SpmdfyTypeMap.end()) {
+        var_type_str = g_SpmdfyTypeMap.at(var_type_str);
+    }
+    metadata["type"]["base_type"] = var_type_str;
+    metadata["type"]["is_built_in"] = true;
+    if (const clang::Expr *var_init = var_decl->getInit(); var_init) {
+        if (!var_type->isBuiltinType()) {
+            metadata["type"]["is_built_in"] = false;
+            var_init->dump();
+            if (llvm::isa<clang::CXXConstructExpr>(var_init)) {
+                    const clang::CXXConstructExpr * ctor_expr = llvm::cast<clang::CXXConstructExpr>(var_init);
+                    std::string ctor_type;
+                    std::vector<std::string> ctor_args;
+                    for(int i = 0; i < ctor_expr->getNumArgs(); i++){
+                        ctor_type += "_" + ctor_expr->getArg(i)->getType().getAsString();
+                        ctor_args.push_back(sourceDump(sm, lang_opt, ctor_expr->getArg(i)));
+                    }
+                    std::string var_init_str = var_type_str + "_ctor" + ctor_type + "(";
+                    var_init_str += strJoin(ctor_args.begin(), ctor_args.end());
+                    var_init_str += ")";
+                    var_type_str = var_type_str + "&";
+                    metadata["init"] = var_init_str;
+                    metadata["type"]["base_type"] = var_type_str;
+            }
+        } else {
+            metadata["init"] = sourceDump(sm, lang_opt, var_init);
+        }
+    }
+    m_function_metadata["globals"].push_back(metadata);
     return true;
 }
 

@@ -30,15 +30,7 @@ clang::Stmt *SpmdfyStmtVisitor::VisitCallExpr(clang::CallExpr *call_expr) {
     } else if (callee_name == "printf") {
         return call_expr;
     }
-    std::unordered_map<std::string_view, std::string_view> atomic_map = {
-        {"atomicAdd", "atomic_add_global"},
-        {"atomicSub", "atomic_subtract_global"},
-        {"atomicExch", "atomic_swap_global"},
-        {"atomicMin", "atomic_min_global"},
-        {"atomicMax", "atomic_max_global"},
-        {"atomicCAS", "atomic_compare_exchange"}};
-    auto is_atomic = atomic_map.find(callee_name);
-    if (is_atomic != atomic_map.end()) {
+    if (auto is_atomic = g_SpmdfyAtomicMap.find(callee_name); is_atomic != g_SpmdfyAtomicMap.end()) {
         std::ostringstream ss;
         clang::Expr **args = call_expr->getArgs();
         ss << is_atomic->second << "(";

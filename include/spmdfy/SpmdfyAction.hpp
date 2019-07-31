@@ -24,6 +24,8 @@
 
 // spmdfy headers
 #include <spmdfy/SpmdfyStmtVisitor.hpp>
+#include <spmdfy/CUDA2ISPC.hpp>
+#include <spmdfy/utils.hpp>
 
 namespace nl = nlohmann;
 namespace ct = clang::tooling;

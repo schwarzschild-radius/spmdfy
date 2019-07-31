@@ -3,12 +3,12 @@
 #include <clang/Tooling/Tooling.h>
 
 // llvm headers
-#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Path.h>
 
 // spmdfy headers
 #include <spmdfy/Format.hpp>
 #include <spmdfy/SpmdfyAction.hpp>
+#include <spmdfy/CommandLineOpts.hpp>
 
 // standard header
 #include <fstream>
@@ -187,8 +187,8 @@ std::string generateISPCTranslationUnit(nl::json metadata) {
         };
     )";
 
-    for (std::string var_decl : metadata["globals"]) {
-        tu << "uniform " << var_decl << '\n';
+    for (auto& var_decl : metadata["globals"]) {
+        tu << "uniform " << getVarDecl(var_decl) << '\n';
     }
 
     for (auto &[name, data] : metadata["functions"].items()) {
@@ -204,18 +204,6 @@ std::string getFileNameFromSource(std::string filepath) {
     const auto [_, filename] = llvm::StringRef(filepath).rsplit('/');
     return filename;
 }
-
-llvm::cl::OptionCategory spmdfy_options("spmdfy -help");
-llvm::cl::opt<std::string>
-    output_filename("o", llvm::cl::desc("Specify Ouput Filename"),
-                    llvm::cl::cat(spmdfy_options));
-llvm::cl::opt<bool>
-    dump_json("dump-json",
-              llvm::cl::desc("Jump JSON description of the Translation Unit"),
-              llvm::cl::cat(spmdfy_options));
-cl::opt<bool> verbosity("v",
-                        cl::desc("Show commands to run and use verbose output"),
-                        cl::value_desc("v"), cl::cat(spmdfy_options));
 
 int main(int argc, const char **argv) {
     using namespace clang::tooling;

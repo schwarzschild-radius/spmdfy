@@ -15,6 +15,7 @@
 
 // spmdfy headers
 #include <spmdfy/utils.hpp>
+#include <spmdfy/CUDA2ISPC.hpp>
 
 // third_party headers
 #include <nlohmann/json.hpp>
