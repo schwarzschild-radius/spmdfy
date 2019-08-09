@@ -14,5 +14,3 @@ add_executable(atomic main.cu atomic.cu)
 target_link_libraries(atomic PRIVATE atomic_ispc)
 set_target_properties(atomic PROPERTIES LINKER_LANGUAGE CUDA)
 target_include_directories(atomic PRIVATE ${atomic_ispc_HEADER_DIR} PRIVATE ${CMAKE_SOURCE_DIR}/examples/utils)
-
-add_test(Atomic_Test atomic)

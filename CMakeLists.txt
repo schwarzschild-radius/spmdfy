@@ -16,9 +16,14 @@ add_executable(spmdfy src/main.cpp
                       src/utils.cpp
                       src/Format.cpp
                       src/CUDA2ISPC.cpp
-                      src/CommandLineOpts.cpp)
-target_include_directories(spmdfy PRIVATE include)
-target_include_directories(spmdfy PRIVATE third_party/json/include)
+                      src/CommandLineOpts.cpp
+                      src/Logger.cpp
+                      src/Generator/SimpleGenerator.cpp)
+
+target_include_directories(spmdfy PRIVATE include
+                                          third_party/json/include 
+                                          third_party/spdlog/include)
+
 set_target_properties(spmdfy PROPERTIES CXX_STANDARD 17
                                         CXX_EXTENSIONS OFF)
 
@@ -50,6 +55,10 @@ set(LLVM_LIBS LLVM)
 target_link_directories(spmdfy PRIVATE ${LLVM_LIBRARY_DIRS})
 target_link_libraries(spmdfy PRIVATE ${CLANG_LIBS} ${LLVM_LIBS})
 
-# examples
+# Tests and CTest
 enable_testing()
 add_subdirectory(examples)
+add_test(Test_Transpose examples/transpose/transpose)
+add_test(Test_saxpy examples/saxpy/saxpy)
+add_test(Test_Shared_Memory examples/CUDA_Features/Shared_Memory/shared_memory)
+add_test(Test_Atomic examples/CUDA_Features/Atomic/atomic)

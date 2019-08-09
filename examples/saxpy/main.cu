@@ -61,7 +61,7 @@ int main() {
     executeCUDA(A, B, cuda, N, a);
     executeISPC(A, B, ispc, N, a);
 
-    if(compareResults(N, ref, cuda, ispc)){
+    if(checkResults(N, ref, cuda, ispc)){
         return 1;
     }
 
