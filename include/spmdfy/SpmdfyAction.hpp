@@ -23,7 +23,7 @@
 #include <nlohmann/json.hpp>
 
 // spmdfy headers
-#include <spmdfy/Generator/SimpeGenerator.hpp>
+#include <spmdfy/Generator/SimpleGenerator.hpp>
 #include <spmdfy/SpmdfyStmtVisitor.hpp>
 #include <spmdfy/utils.hpp>
 
