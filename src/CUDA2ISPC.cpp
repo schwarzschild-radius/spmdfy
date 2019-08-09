@@ -16,3 +16,44 @@ const std::map<std::string, std::string> g_SpmdfyAtomicMap = {
     {"atomicCAS", "atomic_compare_exchange"}};
 
 const std::map<std::string, std::string> g_SpmdfyMathInstrinsicsMap;
+
+const std::string ISPCMacros = R"(
+        #define ISPC_GRID_START                                                        \
+            Dim3 blockIdx, threadIdx;                                                  \
+            for (blockIdx.z = 0; blockIdx.z < gridDim.z; blockIdx.z++) {               \
+                for (blockIdx.y = 0; blockIdx.y < gridDim.y; blockIdx.y++) {           \
+                    for (blockIdx.x = 0; blockIdx.x < gridDim.x; blockIdx.x++) {
+
+        #define ISPC_BLOCK_START                                                       \
+            for (threadIdx.z = 0; threadIdx.z < blockDim.z; threadIdx.z++) {           \
+                for (threadIdx.y = 0; threadIdx.y < blockDim.y; threadIdx.y++) {       \
+                    for (threadIdx.x = programIndex; threadIdx.x < blockDim.x;         \
+                        threadIdx.x += programCount) {
+
+        #define ISPC_GRID_END                                                          \
+            }                                                                          \
+            }                                                                          \
+            }
+
+        #define ISPC_BLOCK_END                                                         \
+            }                                                                          \
+            }                                                                          \
+            }
+
+        #define ISPC_START                                                             \
+            ISPC_GRID                                                                  \
+            ISPC_BLOCK
+
+        #define ISPC_END                                                               \
+            ISPC_GRID_END                                                              \
+            ISPC_BLOCK_END
+
+        #define SYNCTHREADS()                                                          \
+            ISPC_BLOCK_END                                                             \
+            ISPC_BLOCK
+
+        // CUDA dim3 struct
+        struct Dim3{
+            unsigned int32 x, y, z;
+        };
+    )";
