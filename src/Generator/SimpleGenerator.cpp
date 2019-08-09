@@ -1,4 +1,4 @@
-#include <spmdfy/Generator/SimpeGenerator.hpp>
+#include <spmdfy/Generator/SimpleGenerator.hpp>
 
 namespace spmdfy {
 
