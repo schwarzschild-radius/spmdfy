@@ -17,4 +17,37 @@ std::string sourceDump(const clang::SourceManager &sm,
                        (sm.getCharacterData(e) - sm.getCharacterData(b)));
 }
 
+std::string getFileNameFromSource(std::string filepath) {
+    const auto [_, filename] = llvm::StringRef(filepath).rsplit('/');
+    return filename;
+}
+
+std::string getAbsoluteFilePath(const std::string &sFile, std::error_code &EC) {
+    using namespace llvm;
+    if (sFile.empty()) {
+        return sFile;
+    }
+    if (!sys::fs::exists(sFile)) {
+        llvm::errs() << "\n"
+                     << "[SPMDFY] "
+                     << "error: "
+                     << "source file: " << sFile << " doesn't exist\n";
+        EC = std::error_code(
+            static_cast<int>(std::errc::no_such_file_or_directory),
+            std::generic_category());
+        return "";
+    }
+    SmallString<256> fileAbsPath;
+    EC = sys::fs::real_path(sFile, fileAbsPath, true);
+    if (EC) {
+        llvm::errs() << "\n"
+                     << "[SPMDFY] "
+                     << "error: " << EC.message() << ": source file: " << sFile
+                     << "\n";
+        return "";
+    }
+    EC = std::error_code();
+    return fileAbsPath.c_str();
+}
+
 } // namespace spmdfy

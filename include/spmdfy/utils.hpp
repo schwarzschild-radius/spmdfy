@@ -1,9 +1,13 @@
 #ifndef SPMDFY_UTILS_HPP
 #define SPMDFY_UTILS_HPP
 
+// clang headers
 #include <clang/Basic/LangOptions.h>
 #include <clang/Basic/SourceManager.h>
 #include <clang/Lex/Lexer.h>
+
+// llvm headers
+#include <llvm/Support/Path.h>
 
 namespace spmdfy {
 std::string sourceDump(const clang::SourceManager &sm,
@@ -26,6 +30,10 @@ std::string strJoin(Iter b, Iter e, char sep=','){
     }
     return temp;
 }
+
+std::string getFileNameFromSource(std::string filepath);
+std::string getAbsoluteFilePath(const std::string &sFile, std::error_code &EC);
+
 } // namespace spmdfy
 
 #endif

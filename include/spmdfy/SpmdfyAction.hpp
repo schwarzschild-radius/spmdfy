@@ -15,16 +15,16 @@
 // standard headers
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <string>
-#include <string_view>
 #include <vector>
 
 // third party headers
 #include <nlohmann/json.hpp>
 
 // spmdfy headers
+#include <spmdfy/Generator/SimpeGenerator.hpp>
 #include <spmdfy/SpmdfyStmtVisitor.hpp>
-#include <spmdfy/CUDA2ISPC.hpp>
 #include <spmdfy/utils.hpp>
 
 namespace nl = nlohmann;
@@ -33,28 +33,44 @@ namespace mat = clang::ast_matchers;
 
 namespace spmdfy {
 
-class SpmdfyAction : public clang::ASTFrontendAction,
-                     public mat::MatchFinder::MatchCallback {
-
+class SpmdfyConsumer : public clang::ASTConsumer {
   public:
-    explicit SpmdfyAction() : clang::ASTFrontendAction() {}
-    // matcher functions
-    bool cudaKernelFunction(const mat::MatchFinder::MatchResult &result);
-    bool cudaDeviceFunction(const mat::MatchFinder::MatchResult &result);
-    bool globalDeclarations(const mat::MatchFinder::MatchResult &result);
-
-    std::unique_ptr<clang::ASTConsumer> newASTConsumer();
-    std::unique_ptr<clang::ASTConsumer>
-    CreateASTConsumer(clang::CompilerInstance &, llvm::StringRef) override;
-    nl::json getMetadata() { return m_function_metadata; }
-
-  protected:
-    void run(const mat::MatchFinder::MatchResult &result) override;
+    explicit SpmdfyConsumer(clang::ASTContext *m_context,
+                            std::ostringstream &file_writer)
+        : m_context(*m_context), m_sm(m_context->getSourceManager()) {
+        this->m_lang_opts = m_context->getLangOpts();
+        this->gen = llvm::make_unique<SimpleGenerator>(*m_context, file_writer);
+    }
+    virtual void HandleTranslationUnit(clang::ASTContext &m_context);
 
   private:
-    std::unique_ptr<mat::MatchFinder> m_finder;
-    nl::json m_function_metadata;
-    SpmdfyStmtVisitor *m_stmt_visitor;
+    std::unique_ptr<ISPCGenerator> gen;
+    clang::ASTContext &m_context;
+    clang::SourceManager &m_sm;
+    clang::LangOptions m_lang_opts;
+};
+
+class SpmdfyAction : public clang::ASTFrontendAction {
+
+  public:
+    SpmdfyAction(std::ostringstream &file_writer)
+        : m_file_writer(file_writer) {}
+    virtual auto CreateASTConsumer(clang::CompilerInstance &Compiler,
+                                   llvm::StringRef InFile)
+        -> std::unique_ptr<clang::ASTConsumer> override;
+    // auto newASTConsumer() -> std::unique_ptr<clang::ASTConsumer>;
+
+  private:
+    std::ostringstream& m_file_writer;
+};
+
+class SpmdfyFrontendActionFactory : public clang::tooling::FrontendActionFactory{
+    public:
+        template<typename ...ParamsTy>
+        SpmdfyFrontendActionFactory(ParamsTy&... params) : action(new SpmdfyAction(params...)) {}
+        virtual auto create() -> clang::FrontendAction * override;
+    private:
+        clang::FrontendAction* action;
 };
 
 } // namespace spmdfy
