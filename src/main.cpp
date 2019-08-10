@@ -20,6 +20,12 @@ int main(int argc, const char **argv) {
     ClangTool tool(options_parser.getCompilations(),
                    options_parser.getSourcePathList());
     std::vector<std::string> file_sources = options_parser.getSourcePathList();
+    
+    if(file_sources.empty()){
+        llvm::cl::PrintHelpMessage();
+        return 1;
+    }
+
     std::error_code error_code;
 
     std::string &src = file_sources[0];
@@ -55,24 +61,18 @@ int main(int argc, const char **argv) {
 
     // run SPMDfy action on the source
     spmdfy::SpmdfyFrontendActionFactory action(tu_stream);
-    if (tool.run(&action))
+    if (tool.run(&action)){
+        SPMDFY_ERROR("error: unable to spmdfy file");
         return 1;
+    }
 
     if (output_filename != "") {
-        llvm::errs() << "Writing to : " << output_filename << '\n';
+        SPMDFY_INFO("Writing to : {}", output_filename);
         std::fstream out_file(output_filename, std::ios_base::out);
         out_file << tu_stream.str();
         out_file.close();
         if (spmdfy::format::format(output_filename))
-            llvm::errs() << "Unable to format\n";
-/*        std::cout << "The output file:\n";
-         std::fstream test(output_filename, std::ios_base::in);
-        test.seekg(0, test.end);
-        int length = test.tellg();
-        test.seekg(0, test.beg);
-        char *buffer = new char[length];
-        test.read(buffer, length); 
-        std::cout << buffer << '\n';*/
+            SPMDFY_ERROR("Unable to format");
     }
     return 0;
 }

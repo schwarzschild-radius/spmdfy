@@ -1,4 +1,5 @@
 #include <spmdfy/utils.hpp>
+#include <spmdfy/Logger.hpp>
 
 namespace spmdfy {
 std::string sourceDump(const clang::SourceManager &sm,
@@ -10,7 +11,7 @@ std::string sourceDump(const clang::SourceManager &sm,
     clang::SourceLocation b(
         clang::Lexer::GetBeginningOfToken(begin, sm, lang_opt));
     if ((sm.getCharacterData(e) - sm.getCharacterData(b)) < 1) {
-        llvm::errs() << "Cannot dump source\n";
+        SPMDFY_ERROR("SRCDUMP: Canont dump source");
         return "";
     }
     return std::string(sm.getCharacterData(begin),

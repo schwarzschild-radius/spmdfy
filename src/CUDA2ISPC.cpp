@@ -1,10 +1,19 @@
 #include <spmdfy/CUDA2ISPC.hpp>
 
 const std::map<std::string, std::string> g_SpmdfyTypeMap = {
-    {"char", "int8"},     {"unsigned char", "unsigned int8"},
-    {"int32_t", "int32"}, {"unsigned int32_t", "unsigned int32"},
-    {"int64_t", "int64"}, {"unsigned int64_t", "unsigned int64"},
-    {"short", "int16"},   {"unsigned short", "unsigned int16"},
+    {"char", "int8"},
+    {"unsigned char", "unsigned int8"},
+    {"int32_t", "int32"},
+    {"unsigned int32_t", "unsigned int32"},
+    {"uint32_t", "unsigned int32"},
+    {"int8_t", "int8"},
+    {"uint8_t", "unsigned int8"},
+    {"int64_t", "int64"},
+    {"long", "int64"},
+    {"unsigned long", "unsigned int64"},
+    {"unsigned int64_t", "unsigned int64"},
+    {"short", "int16"},
+    {"unsigned short", "unsigned int16"},
     {"_Bool", "bool"}};
 
 const std::map<std::string, std::string> g_SpmdfyAtomicMap = {

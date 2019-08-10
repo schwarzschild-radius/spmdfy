@@ -64,6 +64,7 @@ class SimpleGenerator
     EXPR_VISITOR(Call);
 
     auto VisitBinaryOperator(const clang::BinaryOperator *) -> std::string;
+    auto getISPCBaseType(std::string type) -> std::string;
 
     auto handleTranslationUnit(clang::ASTContext &context) -> bool override {
         clang::DeclContext *traverse_decl = llvm::dyn_cast<clang::DeclContext>(
@@ -104,9 +105,10 @@ class SimpleGenerator
     enum class TUContext {
         GLOBAL,
         CUDA_KERNEL,
+        CUDA_KERNEL_PARAMS,
         CUDA_DEVICE_FUNCTION,
         CXXCONSTRUCTOR,
-        STRUCT
+        STRUCT,
     };
     clang::ASTContext &m_context;
     clang::SourceManager &m_sm;
