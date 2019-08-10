@@ -39,3 +39,6 @@ build/
 
 # VSCode directory
 .vscode/
+
+# experiments directory
+experiments/
