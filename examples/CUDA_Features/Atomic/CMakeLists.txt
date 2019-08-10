@@ -2,8 +2,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/FindISPC.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/FindSPMDfy.cmake)
 
 add_spmdfy_source(atomic_ispc_target atomic.cu atomic.ispc HINTS ${CMAKE_BINARY_DIR}
-                  ISPC_DIR ${CMAKE_CURRENT_BINARY_DIR}
-                  DUMP_JSON)
+                  ISPC_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 add_ispc_library(atomic_ispc ${CMAKE_CURRENT_BINARY_DIR}/atomic.ispc HEADER atomic.h 
                                          HEADER_DIR ${CMAKE_CURRENT_BINARY_DIR})

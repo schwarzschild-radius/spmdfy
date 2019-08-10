@@ -4,9 +4,6 @@ function(add_spmdfy_source ISPC_SOURCE_TARGET SPMDFY_CUDA_SOURCE SPMDFY_ISPC_SOU
 
     cmake_parse_arguments(SPMDFY "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
     set(SPMDFY_EXE ${SPMDFY_HINTS}/spmdfy)
-    if(SPMDFY_DUMP_JSON)
-        set(${SPMDFY_ISPC_SOURCE}_DUMP_JSON "-dump-json")
-    endif()
 
     if(SPMDFY_VERBOSE)
         set(${SPMDFY_ISPC_SOURCE}_VERBOSE "-v")
@@ -21,7 +18,6 @@ function(add_spmdfy_source ISPC_SOURCE_TARGET SPMDFY_CUDA_SOURCE SPMDFY_ISPC_SOU
     add_custom_command(
         OUTPUT ${${SPMDFY_ISPC_SOURCE}_DIR}/${SPMDFY_ISPC_SOURCE}
         COMMAND ${SPMDFY_EXE} -o ${${SPMDFY_ISPC_SOURCE}_DIR}/${SPMDFY_ISPC_SOURCE} 
-                              ${${SPMDFY_ISPC_SOURCE}_DUMP_JSON} 
                               ${${SPMDFY_ISPC_SOURCE}_VERBOSE} 
                               ${CMAKE_CURRENT_SOURCE_DIR}/${SPMDFY_CUDA_SOURCE}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SPMDFY_CUDA_SOURCE} spmdfy
