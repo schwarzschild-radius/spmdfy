@@ -1,3 +1,6 @@
+#ifndef SPMDFY_GENERATOR_HPP
+#define SPMDFY_GENERATOR_HPP
+
 #include <clang/AST/Decl.h>
 
 namespace spmdfy{
@@ -11,3 +14,5 @@ class ISPCGenerator{
 };
 
 }
+
+#endif
