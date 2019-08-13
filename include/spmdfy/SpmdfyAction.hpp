@@ -24,6 +24,7 @@
 
 // spmdfy headers
 #include <spmdfy/Generator/SimpleGenerator.hpp>
+#include <spmdfy/Generator/CFGGenerator/CFGGenerator.hpp>
 #include <spmdfy/SpmdfyStmtVisitor.hpp>
 #include <spmdfy/utils.hpp>
 
@@ -39,7 +40,7 @@ class SpmdfyConsumer : public clang::ASTConsumer {
                             std::ostringstream &file_writer)
         : m_context(*m_context), m_sm(m_context->getSourceManager()) {
         this->m_lang_opts = m_context->getLangOpts();
-        this->gen = llvm::make_unique<SimpleGenerator>(*m_context, file_writer);
+        this->gen = llvm::make_unique<CFGGenerator>(*m_context, file_writer);
     }
     virtual void HandleTranslationUnit(clang::ASTContext &m_context);
 
@@ -58,7 +59,6 @@ class SpmdfyAction : public clang::ASTFrontendAction {
     virtual auto CreateASTConsumer(clang::CompilerInstance &Compiler,
                                    llvm::StringRef InFile)
         -> std::unique_ptr<clang::ASTConsumer> override;
-    // auto newASTConsumer() -> std::unique_ptr<clang::ASTConsumer>;
 
   private:
     std::ostringstream& m_file_writer;

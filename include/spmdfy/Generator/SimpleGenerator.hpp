@@ -4,19 +4,14 @@
 
 #include <spmdfy/CUDA2ISPC.hpp>
 #include <spmdfy/Generator/Generator.hpp>
-#include <spmdfy/utils.hpp>
 #include <spmdfy/Logger.hpp>
+#include <spmdfy/utils.hpp>
 
 #include <sstream>
 
 namespace spmdfy {
 
 extern std::string ispc_macros;
-
-template <typename NodeTy>
-bool isExpansionInMainFile(clang::SourceManager &sm, NodeTy *node) {
-    return sm.isInMainFile(sm.getExpansionLoc(node->getBeginLoc()));
-}
 
 class ISPCKernelGenerator
     : public clang::DeclVisitor<ISPCKernelGenerator, std::string>,
@@ -70,7 +65,7 @@ class SimpleGenerator
         clang::DeclContext *traverse_decl = llvm::dyn_cast<clang::DeclContext>(
             context.getTranslationUnitDecl());
         if (!traverse_decl) {
-            llvm::errs() << "Cannot get DeclContext\n";
+            SPMDFY_ERROR("Cannot Traverse Decl");
             return true;
         }
         m_file_writer << ispc_macros << '\n';
@@ -98,7 +93,7 @@ class SimpleGenerator
             }
         }
         SPMDFY_INFO("Translation Unit:\n {}\n", m_file_writer.str());
-        return true;
+        return false;
     }
 
   private:
