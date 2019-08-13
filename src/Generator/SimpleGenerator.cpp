@@ -64,8 +64,6 @@ struct Dim3 {
 
 #define DECL_DEF_VISITOR(NODE, NAME) DEF_VISITOR(NODE, Decl, NAME)
 
-#define SRCDUMP(NODE) sourceDump(m_sm, m_lang_opts, NODE)
-
 auto rmCastIf(const clang::Expr *expr) -> const clang::Expr * {
     if (llvm::isa<const clang::ImplicitCastExpr>(expr)) {
         return llvm::cast<const clang::ImplicitCastExpr>(expr)
