@@ -18,7 +18,10 @@ add_executable(spmdfy src/main.cpp
                       src/CUDA2ISPC.cpp
                       src/CommandLineOpts.cpp
                       src/Logger.cpp
-                      src/Generator/SimpleGenerator.cpp)
+                      src/Generator/SimpleGenerator.cpp
+                      src/Generator/CFGGenerator/CFGGenerator.cpp
+                      src/Generator/CFGGenerator/ConstructCFG.cpp
+                      src/Generator/CFGGenerator/CFG.cpp)
 
 target_include_directories(spmdfy PRIVATE include
                                           third_party/json/include 
@@ -31,6 +34,11 @@ set(CMAKE_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
 target_include_directories(spmdfy PRIVATE ${LLVM_INCLUDE_DIRS})
 target_include_directories(spmdfy PRIVATE ${CLANG_INCLUDE_DIRS})
 target_compile_definitions(spmdfy PRIVATE ${LLVM_DEFINITIONS})
+
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
+    message("Compiling in debug mode, Logging enabled")
+    target_compile_definitions(spmdfy PRIVATE SPMDFY_DEBUG)
+endif()
 
 set(CLANG_LIBS clangFrontend
                clangDriver
