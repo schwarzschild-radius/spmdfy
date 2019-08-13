@@ -12,13 +12,9 @@ auto SpmdfyAction::CreateASTConsumer(clang::CompilerInstance &Compiler,
 auto SpmdfyConsumer::HandleTranslationUnit(clang::ASTContext &m_context)
     -> void {
     if (gen->handleTranslationUnit(m_context)) {
-        llvm::errs() << "Cannot parse translation unit\n";
+        SPMDFY_ERROR("Cannot Parse Translation Unit");
     }
 }
-
-/* auto SpmdfyAction::newASTConsumer() -> std::unique_ptr<clang::ASTConsumer> {
-    return CreateASTConsumer(this->getCompilerInstance(), getCurrentFile());
-} */
 
 auto SpmdfyFrontendActionFactory::create() -> clang::FrontendAction *{
     return action;
