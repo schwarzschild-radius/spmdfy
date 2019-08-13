@@ -18,11 +18,18 @@ namespace spmdfy {
 	};
 }
 
-// log macros
+#ifdef SPMDFY_DEBUG
 #define SPMDFY_TRACE(...)    ::spmdfy::Logger::getSpmdfyLogger()->trace(__VA_ARGS__)
 #define SPMDFY_INFO(...)     ::spmdfy::Logger::getSpmdfyLogger()->info(__VA_ARGS__)
 #define SPMDFY_WARN(...)     ::spmdfy::Logger::getSpmdfyLogger()->warn(__VA_ARGS__)
 #define SPMDFY_ERROR(...)    ::spmdfy::Logger::getSpmdfyLogger()->error(__VA_ARGS__)
 #define SPMDFY_CRITICAL(...) ::spmdfy::Logger::getSpmdfyLogger()->critical(__VA_ARGS__)
+#else
+#define SPMDFY_TRACE(...)
+#define SPMDFY_INFO(...)
+#define SPMDFY_WARN(...)
+#define SPMDFY_ERROR(...)
+#define SPMDFY_CRITICAL(...)
+#endif
 
 #endif
