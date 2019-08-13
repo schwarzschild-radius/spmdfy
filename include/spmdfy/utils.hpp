@@ -22,6 +22,11 @@ std::string sourceDump(const clang::SourceManager &sm,
                       node->getSourceRange().getEnd());
 }
 
+template <typename NodeTy>
+static bool isExpansionInMainFile(clang::SourceManager &sm, NodeTy *node) {
+    return sm.isInMainFile(sm.getExpansionLoc(node->getBeginLoc()));
+}
+
 template<typename Iter>
 std::string strJoin(Iter b, Iter e, char sep=','){
     std::string temp = *b;
@@ -34,6 +39,7 @@ std::string strJoin(Iter b, Iter e, char sep=','){
 std::string getFileNameFromSource(std::string filepath);
 std::string getAbsoluteFilePath(const std::string &sFile, std::error_code &EC);
 
+#define SRCDUMP(NODE) sourceDump(m_sm, m_lang_opts, NODE)
 } // namespace spmdfy
 
 #endif
