@@ -24,6 +24,9 @@ std::string sourceDump(const clang::SourceManager &sm,
 
 template<typename Iter>
 std::string strJoin(Iter b, Iter e, char sep=','){
+    if(b == e){
+        return "";   
+    }
     std::string temp = *b;
     while(++b != e){
         temp += (std::to_string(sep) + " " + *b);
