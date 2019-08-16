@@ -21,7 +21,8 @@ add_executable(spmdfy src/main.cpp
                       src/Generator/SimpleGenerator.cpp
                       src/Generator/CFGGenerator/CFGGenerator.cpp
                       src/Generator/CFGGenerator/ConstructCFG.cpp
-                      src/Generator/CFGGenerator/CFG.cpp)
+                      src/Generator/CFGGenerator/CFG.cpp
+                      src/Generator/CFGGenerator/CFGCodeGen.cpp)
 
 target_include_directories(spmdfy PRIVATE include
                                           third_party/json/include 

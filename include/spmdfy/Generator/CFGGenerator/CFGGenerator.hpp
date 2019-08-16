@@ -4,6 +4,7 @@
 #include <spmdfy/Generator/Generator.hpp>
 #include <spmdfy/Generator/CFGGenerator/ConstructCFG.hpp>
 #include <spmdfy/Generator/CFGGenerator/CFG.hpp>
+#include <spmdfy/Generator/CFGGenerator/CFGCodeGen.hpp>
 #include <spmdfy/Logger.hpp>
 #include <spmdfy/utils.hpp>
 
@@ -34,10 +35,15 @@ class CFGGenerator : public ISPCGenerator {
     auto handleFunctionDecl(clang::FunctionDecl *func_decl) -> std::string;
 
   private:
+    // AST specific variables
     clang::ASTContext &m_context;
     clang::SourceManager &m_sm;
     clang::LangOptions m_lang_opts;
+    
     std::ostringstream &m_file_writer;
+
+    // CFG specific variables
+    std::vector<CFG::CFGNode*> m_spmd_tutbl;
 };
 
 } // namespace spmdfy

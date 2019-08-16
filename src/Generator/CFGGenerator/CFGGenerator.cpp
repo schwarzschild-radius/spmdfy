@@ -9,19 +9,29 @@ auto CFGGenerator::handleTranslationUnit(clang::ASTContext &context) -> bool {
         SPMDFY_ERROR("Cannot Traverse Decl");
         return true;
     }
+
+    ConstructSpmdCFG cfg(m_context);
+
     for (auto D : traverse_decl->decls()) {
         if (!isExpansionInMainFile(m_sm, D)) {
             continue;
         }
         switch (D->getKind()) {
         case clang::Decl::Function:
-            handleFunctionDecl(llvm::cast<clang::FunctionDecl>(D));
+            if(cfg.add(llvm::cast<const clang::FunctionDecl>(D)))
+                SPMDFY_ERROR("Unable to add FunctionDecl");
             break;
         default:
             SPMDFY_ERROR("Declaration not supported yet!");
             break;
         }
     }
+
+    m_spmd_tutbl = cfg.get();
+
+    codegen::CFGCodeGen generator(m_spmd_tutbl);
+    m_file_writer << generator.get();
+
     SPMDFY_INFO("Translation Unit:\n {}", m_file_writer.str());
     return false;
 }
@@ -41,9 +51,6 @@ auto CFGGenerator::handleFunctionDecl(clang::FunctionDecl *func_decl)
 
     clang::CompoundStmt *cpmd_stmt =
         llvm::cast<clang::CompoundStmt>(func_decl->getBody());
-
-    ConstructSpmdCFG test(m_context, cpmd_stmt);
-    test.get();
 
     return func_gen.str();
 }
