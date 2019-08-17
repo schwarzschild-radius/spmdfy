@@ -4,12 +4,13 @@
 #include <clang/AST/RecursiveASTVisitor.h>
 
 #include <spmdfy/Logger.hpp>
+#include <spmdfy/utils.hpp>
 
 #include <array>
+#include <cassert>
 #include <memory>
 #include <tuple>
 #include <variant>
-#include <cassert>
 
 template <class... Ts> struct visitor : Ts... { using Ts::operator()...; };
 template <class... Ts> visitor(Ts...)->visitor<Ts...>;
@@ -59,6 +60,10 @@ class CFGNode {
     auto getContextTypeName() -> std::string const;
 
     // virtual methods
+    virtual auto getName() -> std::string const {
+        return "No Name";
+    }
+
     virtual auto getNext() -> CFGNode *const {
         SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
         return nullptr;
@@ -83,11 +88,17 @@ class CFGNode {
 
 class GlobalVarNode : public CFGNode {
   public:
-    GlobalVarNode(const clang::VarDecl *var_decl) {
+    GlobalVarNode(clang::ASTContext &ast_context,
+                  const clang::VarDecl *var_decl)
+        : m_ast_context(ast_context) {
         SPMDFY_INFO("Creating GlobalVarNode {}", var_decl->getNameAsString());
         m_var_decl = var_decl;
         m_node_type = GlobalVar;
         m_context = Global;
+    }
+
+    auto getName() -> std::string const override {
+        return m_var_decl->getNameAsString();
     }
 
     auto getDeclKindString() -> std::string const {
@@ -96,11 +107,16 @@ class GlobalVarNode : public CFGNode {
 
   private:
     const clang::VarDecl *m_var_decl;
+    
+    // AST context
+    clang::ASTContext &m_ast_context;
 };
 
 class KernelFuncNode : public CFGNode {
   public:
-    KernelFuncNode(const clang::FunctionDecl *func_decl) {
+    KernelFuncNode(clang::ASTContext &ast_context,
+                   const clang::FunctionDecl *func_decl)
+        : m_ast_context(ast_context) {
         SPMDFY_INFO("Creating KerneFuncNode {}", func_decl->getNameAsString());
         m_func_decl = func_decl;
         m_node_type = KernelFunc;
@@ -110,11 +126,17 @@ class KernelFuncNode : public CFGNode {
 
     auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
     auto getNext() -> CFGNode *const override;
+    auto getName() -> std::string const override{
+        return m_func_decl->getNameAsString();
+    }
     auto getDeclKindString() -> std::string const;
 
   private:
     const clang::FunctionDecl *m_func_decl;
     CFGEdge *next;
+
+    // AST context
+    clang::ASTContext &m_ast_context;
 };
 
 class InternalNode : public CFGNode {
@@ -122,7 +144,8 @@ class InternalNode : public CFGNode {
     using NodeTy = std::variant<const clang::Decl *, const clang::Stmt *,
                                 const clang::Expr *, const clang::Type *>;
 
-    InternalNode(NodeTy node) : m_node(node) {
+    InternalNode(clang::ASTContext &ast_context, NodeTy node)
+        : m_node(node), m_ast_context(ast_context) {
         SPMDFY_INFO("Creating InternalNode {}", getInternalNodeName());
         m_node_type = Internal;
         next = new CFGEdge();
@@ -131,8 +154,17 @@ class InternalNode : public CFGNode {
 
     // getters
     auto getInternalNodeName() -> std::string const;
-
+    template<typename ASTNodeTy>
+    auto getInternalNode() -> ASTNodeTy*{
+        return std::visit(visitor{
+            [](const clang::Decl *decl) { return reinterpret_cast<ASTNodeTy*>(decl); },
+            [](const clang::Stmt *stmt) { return reinterpret_cast<ASTNodeTy*>(stmt); },
+            [](const clang::Expr *expr) { return reinterpret_cast<ASTNodeTy*>(expr); },
+            [](const clang::Type *type) { return reinterpret_cast<ASTNodeTy*>(type); }}
+        , m_node);
+    }
     // override
+    auto getName() -> std::string const override;
     auto getNext() -> CFGNode *const override;
     auto getPrevious() -> CFGNode *const override;
     auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
@@ -141,17 +173,23 @@ class InternalNode : public CFGNode {
   private:
     NodeTy m_node;
     CFGEdge *next, *prev;
+
+    // AST context
+    clang::ASTContext &m_ast_context;
 };
 
 class ExitNode : public CFGNode {
   public:
-    ExitNode() {
+    ExitNode(){
         SPMDFY_INFO("Creating ExitNode");
         m_node_type = Exit;
         prev = new CFGEdge();
     }
     auto getPrevious() -> CFGNode *const override;
     auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+    auto getName() -> std::string const override {
+        return "Exit";
+    }
 
   private:
     CFGEdge *prev;

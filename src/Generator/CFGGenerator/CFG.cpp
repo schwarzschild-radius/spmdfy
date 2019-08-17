@@ -39,7 +39,10 @@ auto CFGEdge::getEdgeTypeName() -> std::string const {
     }
 }
 
-auto CFGEdge::getTerminal() -> CFGNode *const { return m_terminal; }
+auto CFGEdge::getTerminal() -> CFGNode *const { 
+    SPMDFY_INFO("Getting terminal node {}", m_terminal->getName());
+    return m_terminal; 
+}
 
 auto CFGEdge::setTerminal(CFGNode *terminal, Edge edge_type) -> bool {
     m_terminal = terminal;
@@ -53,15 +56,15 @@ auto CFGEdge::setEdgeType(Edge edge_type) -> bool {
 }
 // CFGEdge
 
-auto KernelFuncNode::getNext() -> CFGNode* const {
-    return next->getTerminal();
-}
+auto KernelFuncNode::getNext() -> CFGNode *const { return next->getTerminal(); }
 
 auto KernelFuncNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
-    if (next->setTerminal(node, edge_type))
+    if (next->setTerminal(node, edge_type)) {
+        SPMDFY_ERROR("Unable to set the node!");
         return true;
+    }
     SPMDFY_INFO("[KernelFunc/{}] setting edge to {} with edge type {}",
-                m_func_decl->getNameAsString(), node->getNodeTypeName(),
+                getName(), next->getTerminal()->getName(),
                 next->getEdgeTypeName());
     return false;
 }
@@ -80,7 +83,13 @@ auto InternalNode::getPrevious() -> CFGNode *const {
 }
 
 auto InternalNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
-    return next->setTerminal(node, edge_type);
+    if (next->setTerminal(node, edge_type)) {
+        return true;
+    }
+    SPMDFY_INFO("[Internal/{}] setting edge to {} with edge type {}",
+                getName(), next->getTerminal()->getName(),
+                next->getEdgeTypeName());
+    return false;
 }
 
 auto InternalNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
@@ -95,6 +104,34 @@ auto InternalNode::getInternalNodeName() -> std::string const {
             [](const clang::Expr *expr) { return expr->getStmtClassName(); },
             [](const clang::Type *type) { return type->getTypeClassName(); }},
         m_node);
+}
+
+auto InternalNode::getName() -> std::string const {
+    auto& m_sm = m_ast_context.getSourceManager();
+    auto m_lang_opts = m_ast_context.getLangOpts();
+    m_lang_opts.CPlusPlus = true;
+    m_lang_opts.Bool = true;
+    return std::visit(visitor{[](const clang::Decl *decl) ->std::string {
+                                  if (llvm::isa<const clang::NamedDecl>(decl)) {
+                                      return llvm::cast<const clang::NamedDecl>(
+                                                 decl)
+                                          ->getNameAsString();
+                                  }
+                                  return "";
+                              },
+                              [&m_sm, &m_lang_opts](const clang::Stmt *stmt) ->std::string {
+                                  return SRCDUMP(stmt);
+                              },
+                              [&m_sm, &m_lang_opts](const clang::Expr *expr) ->std::string {
+                                  return SRCDUMP(expr);
+                              },
+                              [&m_lang_opts](const clang::Type *type) ->std::string {
+                                  clang::PrintingPolicy pm(m_lang_opts);
+                                  clang::QualType qual =
+                                      clang::QualType::getFromOpaquePtr(type);
+                                  return qual.getAsString(pm);
+                              }},
+                      m_node);
 }
 // InternalNode
 

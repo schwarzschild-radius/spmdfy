@@ -29,7 +29,7 @@ auto CFGGenerator::handleTranslationUnit(clang::ASTContext &context) -> bool {
 
     m_spmd_tutbl = cfg.get();
 
-    codegen::CFGCodeGen generator(m_spmd_tutbl);
+    codegen::CFGCodeGen generator(m_context, m_spmd_tutbl);
     m_file_writer << generator.get();
 
     SPMDFY_INFO("Translation Unit:\n {}", m_file_writer.str());
