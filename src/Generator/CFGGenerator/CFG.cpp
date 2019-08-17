@@ -39,9 +39,9 @@ auto CFGEdge::getEdgeTypeName() -> std::string const {
     }
 }
 
-auto CFGEdge::getTerminal() -> CFGNode *const { 
+auto CFGEdge::getTerminal() -> CFGNode *const {
     SPMDFY_INFO("Getting terminal node {}", m_terminal->getName());
-    return m_terminal; 
+    return m_terminal;
 }
 
 auto CFGEdge::setTerminal(CFGNode *terminal, Edge edge_type) -> bool {
@@ -86,9 +86,8 @@ auto InternalNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
     if (next->setTerminal(node, edge_type)) {
         return true;
     }
-    SPMDFY_INFO("[Internal/{}] setting edge to {} with edge type {}",
-                getName(), next->getTerminal()->getName(),
-                next->getEdgeTypeName());
+    SPMDFY_INFO("[Internal/{}] setting edge to {} with edge type {}", getName(),
+                next->getTerminal()->getName(), next->getEdgeTypeName());
     return false;
 }
 
@@ -107,31 +106,31 @@ auto InternalNode::getInternalNodeName() -> std::string const {
 }
 
 auto InternalNode::getName() -> std::string const {
-    auto& m_sm = m_ast_context.getSourceManager();
+    auto &m_sm = m_ast_context.getSourceManager();
     auto m_lang_opts = m_ast_context.getLangOpts();
     m_lang_opts.CPlusPlus = true;
     m_lang_opts.Bool = true;
-    return std::visit(visitor{[](const clang::Decl *decl) ->std::string {
-                                  if (llvm::isa<const clang::NamedDecl>(decl)) {
-                                      return llvm::cast<const clang::NamedDecl>(
-                                                 decl)
-                                          ->getNameAsString();
-                                  }
-                                  return "";
-                              },
-                              [&m_sm, &m_lang_opts](const clang::Stmt *stmt) ->std::string {
-                                  return SRCDUMP(stmt);
-                              },
-                              [&m_sm, &m_lang_opts](const clang::Expr *expr) ->std::string {
-                                  return SRCDUMP(expr);
-                              },
-                              [&m_lang_opts](const clang::Type *type) ->std::string {
-                                  clang::PrintingPolicy pm(m_lang_opts);
-                                  clang::QualType qual =
-                                      clang::QualType::getFromOpaquePtr(type);
-                                  return qual.getAsString(pm);
-                              }},
-                      m_node);
+    return std::visit(
+        visitor{[](const clang::Decl *decl) -> std::string {
+                    if (llvm::isa<const clang::NamedDecl>(decl)) {
+                        return llvm::cast<const clang::NamedDecl>(decl)
+                            ->getNameAsString();
+                    }
+                    return "";
+                },
+                [&m_sm, &m_lang_opts](const clang::Stmt *stmt) -> std::string {
+                    return SRCDUMP(stmt);
+                },
+                [&m_sm, &m_lang_opts](const clang::Expr *expr) -> std::string {
+                    return SRCDUMP(expr);
+                },
+                [&m_lang_opts](const clang::Type *type) -> std::string {
+                    clang::PrintingPolicy pm(m_lang_opts);
+                    clang::QualType qual =
+                        clang::QualType::getFromOpaquePtr(type);
+                    return qual.getAsString(pm);
+                }},
+        m_node);
 }
 // InternalNode
 

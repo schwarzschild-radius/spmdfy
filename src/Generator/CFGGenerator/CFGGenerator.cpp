@@ -32,7 +32,7 @@ auto CFGGenerator::handleTranslationUnit(clang::ASTContext &context) -> bool {
     codegen::CFGCodeGen generator(m_context, m_spmd_tutbl);
     m_file_writer << generator.get();
 
-    SPMDFY_INFO("Translation Unit:\n {}", m_file_writer.str());
+    SPMDFY_INFO("Translation Unit:\n{}", m_file_writer.str());
     return false;
 }
 

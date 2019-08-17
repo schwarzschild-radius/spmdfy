@@ -129,6 +129,9 @@ class KernelFuncNode : public CFGNode {
     auto getName() -> std::string const override{
         return m_func_decl->getNameAsString();
     }
+    auto getKernelNode() -> const clang::FunctionDecl * const{
+        return m_func_decl;
+    }
     auto getDeclKindString() -> std::string const;
 
   private:
@@ -155,7 +158,7 @@ class InternalNode : public CFGNode {
     // getters
     auto getInternalNodeName() -> std::string const;
     template<typename ASTNodeTy>
-    auto getInternalNode() -> ASTNodeTy*{
+    auto getInternalNodeAs() -> ASTNodeTy*{
         return std::visit(visitor{
             [](const clang::Decl *decl) { return reinterpret_cast<ASTNodeTy*>(decl); },
             [](const clang::Stmt *stmt) { return reinterpret_cast<ASTNodeTy*>(stmt); },
