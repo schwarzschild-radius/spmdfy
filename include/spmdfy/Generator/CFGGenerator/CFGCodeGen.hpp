@@ -1,8 +1,8 @@
 #ifndef CFGCODEGEN_HPP
 #define CFGCODEGEN_HPP
 
-#include <spmdfy/CUDA2ISPC.hpp>
 #include <spmdfy/CFG/CFG.hpp>
+#include <spmdfy/CUDA2ISPC.hpp>
 #include <spmdfy/Logger.hpp>
 #include <spmdfy/utils.hpp>
 
@@ -10,23 +10,28 @@
 #include <clang/AST/RecursiveASTVisitor.h>
 #include <clang/AST/StmtVisitor.h>
 #include <clang/AST/TypeVisitor.h>
+#include <spmdfy/CFG/CFGVisitor.hpp>
 
 #include <sstream>
 #include <string>
 #include <vector>
 
 namespace spmdfy {
+extern std::string ispc_macros;
 namespace codegen {
 
 class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
                    public clang::ConstStmtVisitor<CFGCodeGen, std::string>,
-                   public clang::TypeVisitor<CFGCodeGen, std::string> {
+                   public clang::TypeVisitor<CFGCodeGen, std::string>,
+                   public cfg::CFGVisitor<CFGCodeGen, std::string> {
     using clang::ConstDeclVisitor<CFGCodeGen, std::string>::Visit;
     using clang::ConstStmtVisitor<CFGCodeGen, std::string>::Visit;
     using clang::TypeVisitor<CFGCodeGen, std::string>::Visit;
+    using cfg::CFGVisitor<CFGCodeGen, std::string>::Visit;
 
   public:
     using OStreamTy = std::ostringstream;
+    
     CFGCodeGen(clang::ASTContext &ast_context,
                const std::vector<cfg::CFGNode *> &node)
         : m_ast_context(ast_context), m_sm(ast_context.getSourceManager()),
@@ -39,8 +44,6 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
     auto traverseCFG() -> std::string const;
 
     // ispc code generators
-    auto ispcCodeGen(cfg::KernelFuncNode *kernel) -> std::string;
-    auto ispcCodeGen(cfg::InternalNode *internal) -> std::string;
     auto getISPCBaseType(std::string type) -> std::string;
 
     // ispc code gen vistiors
@@ -52,6 +55,8 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
     auto Visit##NODE##Expr(const clang::NODE##Expr *)->std::string
 #define TYPE_VISITOR(NODE)                                                     \
     auto Visit##NODE##Type(const clang::NODE##Type *)->std::string
+#define CFGNODE_VISITOR(NODE)                                                     \
+    auto Visit##NODE##Node(cfg::NODE##Node *)->std::string
 
     DECL_VISITOR(Var);
     DECL_VISITOR(ParmVar);
@@ -63,6 +68,13 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
     TYPE_VISITOR(Record);
     TYPE_VISITOR(IncompleteArray);
 
+    CFGNODE_VISITOR(KernelFunc);
+    CFGNODE_VISITOR(Internal);
+    CFGNODE_VISITOR(ISPCBlock);
+    CFGNODE_VISITOR(ISPCBlockExit);
+    CFGNODE_VISITOR(ISPCGrid);
+    CFGNODE_VISITOR(ISPCGridExit);
+
   private:
     // AST specific variables
     clang::ASTContext &m_ast_context;
@@ -71,7 +83,7 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
 
     cfg::CFGNode::Context m_tu_context;
 
-    const std::vector<cfg::CFGNode *> m_node;
+    const cfg::SpmdTUTy& m_node;
 };
 
 } // namespace codegen

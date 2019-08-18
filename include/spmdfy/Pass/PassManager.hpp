@@ -9,8 +9,10 @@
 #include <spmdfy/utils.hpp>
 
 #include <spmdfy/Pass/Passes/PrintCFGPass.hpp>
+#include <spmdfy/Pass/Passes/InsertISPCNodes.hpp>
 
 #include <spmdfy/Pass/PassSequence.hpp>
+#include <spmdfy/Pass/PassWorkspace.hpp>
 
 #include <clang/AST/RecursiveASTVisitor.h>
 
@@ -44,6 +46,7 @@ class PassManager {
     // CFG specific variables
     SpmdTUTy &m_spmd_tutbl;
     pass_sequence_t pass_sequence;
+    Workspace m_workspace;
 };
 
 } // namespace pass

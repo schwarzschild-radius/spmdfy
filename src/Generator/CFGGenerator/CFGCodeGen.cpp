@@ -12,42 +12,11 @@ auto CFGCodeGen::getFrom(cfg::CFGNode *) -> std::string const { return ""; }
 
 auto CFGCodeGen::traverseCFG() -> std::string const {
     OStreamTy tu_gen;
+    tu_gen << ispc_macros;
     for (auto node : m_node) {
-        if (node->getNodeType() == cfg::CFGNode::KernelFunc) {
-            tu_gen << ispcCodeGen(dynamic_cast<cfg::KernelFuncNode *>(node));
-        }
+        tu_gen << Visit(node);
     }
     return tu_gen.str();
-}
-
-auto CFGCodeGen::ispcCodeGen(cfg::InternalNode *internal) -> std::string {
-    SPMDFY_INFO("CodeGen InternalNode {}", internal->getName());
-    OStreamTy internal_gen;
-    const std::string &node_name = internal->getInternalNodeName();
-    if (node_name == "Var") {
-        internal_gen << Visit(internal->getInternalNodeAs<const clang::VarDecl>())
-                     << ";\n";
-    }else{
-        internal_gen << internal->getName() << ";\n";
-    }
-
-    return internal_gen.str();
-}
-
-auto CFGCodeGen::ispcCodeGen(cfg::KernelFuncNode *kernel) -> std::string {
-    OStreamTy kernel_gen;
-    m_tu_context = cfg::CFGNode::Context::Kernel;
-    kernel_gen << Visit(kernel->getKernelNode());
-    cfg::CFGNode *curr_node = kernel;
-    while (curr_node->getNodeType() != cfg::CFGNode::Exit) {
-        SPMDFY_INFO("Current Internal node: {}", curr_node->getName());
-        if (curr_node->getNodeType() == cfg::CFGNode::Internal)
-            kernel_gen << ispcCodeGen(
-                dynamic_cast<cfg::InternalNode *>(curr_node));
-        curr_node = curr_node->getNext();
-    }
-    kernel_gen << "}\n";
-    return kernel_gen.str();
 }
 
 // CodeGen Visitors
@@ -58,6 +27,8 @@ auto CFGCodeGen::ispcCodeGen(cfg::KernelFuncNode *kernel) -> std::string {
 #define DECL_DEF_VISITOR(NODE, NAME) DEF_VISITOR(NODE, Decl, NAME)
 #define STMT_DEF_VISITOR(NODE, NAME) DEF_VISITOR(NODE, Stmt, NAME)
 #define TYPE_DEF_VISITOR(NODE, NAME) DEF_VISITOR(NODE, Type, NAME)
+#define CFGNODE_DEF_VISITOR(NODE, NAME)                                        \
+    auto CFGCodeGen::Visit##NODE##Node(cfg::NODE##Node *NAME)->std::string
 
 auto rmCastIf(const clang::Expr *expr) -> const clang::Expr * {
     if (llvm::isa<const clang::ImplicitCastExpr>(expr)) {
@@ -226,10 +197,59 @@ DECL_DEF_VISITOR(Function, func_decl) {
         for (auto param : params) {
             func_gen << ", " << Visit(param);
         }
-        func_gen << "{\n";
+        func_gen << "){\n";
     }
 
     return func_gen.str();
+}
+
+CFGNODE_DEF_VISITOR(KernelFunc, kernel) {
+    OStreamTy kernel_gen;
+    m_tu_context = cfg::CFGNode::Context::Kernel;
+    kernel_gen << Visit(kernel->getKernelNode());
+    cfg::CFGNode *curr_node = kernel->getNext();
+    while (curr_node->getNodeType() != cfg::CFGNode::Exit) {
+        SPMDFY_INFO("Current Internal node: {}", curr_node->getName());
+        kernel_gen << Visit(curr_node);
+        curr_node = curr_node->getNext();
+    }
+    kernel_gen << "}\n";
+    return kernel_gen.str();
+}
+
+CFGNODE_DEF_VISITOR(Internal, internal) {
+    SPMDFY_INFO("CodeGen InternalNode {}", internal->getName());
+    OStreamTy internal_gen;
+    const std::string &node_name = internal->getInternalNodeName();
+    if (node_name == "Var") {
+        internal_gen << Visit(
+                            internal->getInternalNodeAs<const clang::VarDecl>())
+                     << ";\n";
+    } else {
+        internal_gen << internal->getName() << ";\n";
+    }
+
+    return internal_gen.str();
+}
+
+CFGNODE_DEF_VISITOR(ISPCBlock, ispc_block){
+    SPMDFY_INFO("CodeGen ISPCBlock Node");
+    return "ISPC_BLOCK_START\n";
+}
+
+CFGNODE_DEF_VISITOR(ISPCBlockExit, ispc_block){
+    SPMDFY_INFO("CodeGen ISPCBlockExit Node");
+    return "ISPC_BLOCK_END\n";
+}
+
+CFGNODE_DEF_VISITOR(ISPCGrid, ispc_block){
+    SPMDFY_INFO("CodeGen ISPCGrid Node");
+    return "ISPC_GRID_START\n";
+}
+
+CFGNODE_DEF_VISITOR(ISPCGridExit, ispc_block){
+    SPMDFY_INFO("CodeGen ISPCGridExit Node");
+    return "ISPC_GRID_END\n";
 }
 
 } // namespace codegen

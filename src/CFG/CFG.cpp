@@ -14,6 +14,14 @@ auto CFGNode::getNodeTypeName() -> std::string const {
         return "InternalNode";
     case Exit:
         return "ExitNode";
+    case ISPCBlock:
+        return "ISPCBlockNode";
+    case ISPCBlockExit:
+        return "ISPCBlockExitNode";
+    case ISPCGrid:
+        return "ISPCGridNode";
+    case ISPCGridExit:
+        return "ISPCGridExitNode";
     default:
         return "CFGNode";
     }
@@ -75,6 +83,19 @@ auto KernelFuncNode::getDeclKindString() -> std::string const {
     return temp;
 }
 
+auto KernelFuncNode::splitEdge(CFGNode* node) -> bool{
+    auto nxt = next->getTerminal();
+    if(nxt == nullptr){
+        SPMDFY_ERROR("[{}] Cannot Split Edge as next node is null", getName());
+        return true;
+    }
+    node->setNext(nxt, cfg::CFGEdge::Complete);
+    next->setTerminal(node, cfg::CFGEdge::Complete);
+    nxt->setPrevious(node, cfg::CFGEdge::Complete);
+    node->setPrevious(next->getTerminal(), cfg::CFGEdge::Complete);
+    return false;
+}
+
 // KernelFuncNode
 auto InternalNode::getNext() -> CFGNode *const { return next->getTerminal(); }
 
@@ -132,6 +153,20 @@ auto InternalNode::getName() -> std::string const {
                 }},
         m_node);
 }
+
+auto InternalNode::splitEdge(CFGNode* node) -> bool{
+    auto nxt = next->getTerminal();
+    if(nxt == nullptr){
+        SPMDFY_ERROR("[{}] Cannot Split Edge as next node is null", getName());
+        return true;
+    }
+    node->setNext(nxt, cfg::CFGEdge::Complete);
+    next->setTerminal(node, cfg::CFGEdge::Complete);
+    nxt->setPrevious(node, cfg::CFGEdge::Complete);
+    node->setPrevious(next->getTerminal(), cfg::CFGEdge::Complete);
+    return false;
+}
+
 // InternalNode
 
 auto ExitNode::getPrevious() -> CFGNode *const { return prev->getTerminal(); }
@@ -142,6 +177,131 @@ auto ExitNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
 
 // ExitNode
 
-} // namespace CFG
+auto ISPCBlockNode::getName() -> std::string const { return "ISPCBlock"; }
+
+auto ISPCBlockNode::getNext() -> CFGNode *const { return next->getTerminal(); }
+
+auto ISPCBlockNode::getPrevious() -> CFGNode *const {
+    return prev->getTerminal();
+}
+
+auto ISPCBlockNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
+    if (next->setTerminal(node, edge_type)) {
+        return true;
+    }
+
+    SPMDFY_INFO("[{}] setting edge to {} with edge type {}", getName(),
+                next->getTerminal()->getName(), next->getEdgeTypeName());
+    return false;
+}
+auto ISPCBlockNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type)
+    -> bool {
+    if (prev->setTerminal(node, edge_type)) {
+        return true;
+    }
+
+    SPMDFY_INFO("[{}] setting edge to {} with edge type {}", getName(),
+                prev->getTerminal()->getName(), prev->getEdgeTypeName());
+    return false;
+}
+
+// ISPCBlockNode
+
+auto ISPCBlockExitNode::getName() -> std::string const {
+    return "ISPCBlockExit";
+}
+auto ISPCBlockExitNode::getNext() -> CFGNode *const {
+    return next->getTerminal();
+}
+auto ISPCBlockExitNode::getPrevious() -> CFGNode *const {
+    return prev->getTerminal();
+}
+auto ISPCBlockExitNode::setNext(CFGNode *node, CFGEdge::Edge edge_type)
+    -> bool {
+    if (next->setTerminal(node, edge_type)) {
+        return true;
+    }
+
+    SPMDFY_INFO("[{}] setting edge to {} with edge type {}", getName(),
+                next->getTerminal()->getName(), next->getEdgeTypeName());
+    return false;
+}
+auto ISPCBlockExitNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type)
+    -> bool {
+    if (prev->setTerminal(node, edge_type)) {
+        return true;
+    }
+
+    SPMDFY_INFO("[{}] setting edge to {} with edge type {}", getName(),
+                prev->getTerminal()->getName(), prev->getEdgeTypeName());
+    return false;
+}
+
+// ISPCBlockExitNode
+
+
+auto ISPCGridNode::getName() -> std::string const { return "ISPCGrid"; }
+
+auto ISPCGridNode::getNext() -> CFGNode *const { return next->getTerminal(); }
+
+auto ISPCGridNode::getPrevious() -> CFGNode *const {
+    return prev->getTerminal();
+}
+
+auto ISPCGridNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
+    if (next->setTerminal(node, edge_type)) {
+        return true;
+    }
+
+    SPMDFY_INFO("[{}] setting edge to {} with edge type {}", getName(),
+                next->getTerminal()->getName(), next->getEdgeTypeName());
+    return false;
+}
+auto ISPCGridNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type)
+    -> bool {
+    if (prev->setTerminal(node, edge_type)) {
+        return true;
+    }
+
+    SPMDFY_INFO("[{}] setting edge to {} with edge type {}", getName(),
+                prev->getTerminal()->getName(), prev->getEdgeTypeName());
+    return false;
+}
+
+// ISPCGridNode
+
+auto ISPCGridExitNode::getName() -> std::string const {
+    return "ISPCGridExit";
+}
+auto ISPCGridExitNode::getNext() -> CFGNode *const {
+    return next->getTerminal();
+}
+auto ISPCGridExitNode::getPrevious() -> CFGNode *const {
+    return prev->getTerminal();
+}
+auto ISPCGridExitNode::setNext(CFGNode *node, CFGEdge::Edge edge_type)
+    -> bool {
+    if (next->setTerminal(node, edge_type)) {
+        return true;
+    }
+
+    SPMDFY_INFO("[{}] setting edge to {} with edge type {}", getName(),
+                next->getTerminal()->getName(), next->getEdgeTypeName());
+    return false;
+}
+auto ISPCGridExitNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type)
+    -> bool {
+    if (prev->setTerminal(node, edge_type)) {
+        return true;
+    }
+
+    SPMDFY_INFO("[{}] setting edge to {} with edge type {}", getName(),
+                prev->getTerminal()->getName(), prev->getEdgeTypeName());
+    return false;
+}
+
+// ISPCGridExitNode
+
+} // namespace cfg
 
 } // namespace spmdfy

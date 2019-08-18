@@ -47,7 +47,11 @@ class CFGNode {
         IfStmt,
         ForStmt,
         Internal,
-        Exit
+        Exit,
+        ISPCBlock,
+        ISPCBlockExit,
+        ISPCGrid,
+        ISPCGridExit
     };
     enum Context { Global, Kernel, Device };
     // getters
@@ -59,6 +63,11 @@ class CFGNode {
     // virtual methods
     virtual auto getName() -> std::string const {
         return "No Name";
+    }
+
+    virtual auto splitEdge(CFGNode*) -> bool{
+        SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
+        return true;
     }
 
     virtual auto getNext() -> CFGNode *const {
@@ -121,6 +130,7 @@ class KernelFuncNode : public CFGNode {
         next = new CFGEdge();
     }
 
+    auto splitEdge(CFGNode*) -> bool override;
     auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
     auto getNext() -> CFGNode *const override;
     auto getName() -> std::string const override{
@@ -163,7 +173,9 @@ class InternalNode : public CFGNode {
             [](const clang::Type *type) { return reinterpret_cast<ASTNodeTy*>(type); }}
         , m_node);
     }
+
     // override
+    auto splitEdge(CFGNode*) -> bool override;
     auto getName() -> std::string const override;
     auto getNext() -> CFGNode *const override;
     auto getPrevious() -> CFGNode *const override;
@@ -193,6 +205,91 @@ class ExitNode : public CFGNode {
 
   private:
     CFGEdge *prev;
+};
+
+class ISPCBlockNode: public CFGNode{
+  public:
+    ISPCBlockNode(){
+        SPMDFY_INFO("Creating ISPCBlockNode");
+        m_node_type = ISPCBlock;
+        m_context = Kernel;
+        prev = new CFGEdge();
+        next = new CFGEdge();
+    }
+
+    // override
+    auto getName() -> std::string const override;
+    auto getNext() -> CFGNode *const override;
+    auto getPrevious() -> CFGNode *const override;
+    auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+    auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+
+  private:
+    CFGEdge *prev, *next;
+};
+
+class ISPCBlockExitNode: public CFGNode{
+  public:
+    ISPCBlockExitNode(){
+        SPMDFY_INFO("Creating ISPCBlockExitNode");
+        m_node_type = ISPCBlockExit;
+        m_context = Kernel;
+        prev = new CFGEdge();
+        next = new CFGEdge();
+    }
+
+    // override 
+    auto getName() -> std::string const override;
+    auto getNext() -> CFGNode *const override;
+    auto getPrevious() -> CFGNode *const override;
+    auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+    auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+
+  private:
+    CFGEdge *prev, *next;
+};
+
+
+class ISPCGridNode: public CFGNode{
+  public:
+    ISPCGridNode(){
+        SPMDFY_INFO("Creating ISPCGridNode");
+        m_node_type = ISPCGrid;
+        m_context = Kernel;
+        prev = new CFGEdge();
+        next = new CFGEdge();
+    }
+
+    // override
+    auto getName() -> std::string const override;
+    auto getNext() -> CFGNode *const override;
+    auto getPrevious() -> CFGNode *const override;
+    auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+    auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+
+  private:
+    CFGEdge *prev, *next;
+};
+
+class ISPCGridExitNode: public CFGNode{
+  public:
+    ISPCGridExitNode(){
+        SPMDFY_INFO("Creating ISPCGridExitNode");
+        m_node_type = ISPCGridExit;
+        m_context = Kernel;
+        prev = new CFGEdge();
+        next = new CFGEdge();
+    }
+
+    // override 
+    auto getName() -> std::string const override;
+    auto getNext() -> CFGNode *const override;
+    auto getPrevious() -> CFGNode *const override;
+    auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+    auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+
+  private:
+    CFGEdge *prev, *next;
 };
 
 } // namespace CFG

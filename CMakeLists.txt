@@ -21,10 +21,13 @@ add_executable(spmdfy src/main.cpp
                       src/Generator/SimpleGenerator.cpp
                       src/Generator/CFGGenerator/CFGGenerator.cpp
                       src/Generator/CFGGenerator/ConstructCFG.cpp
-                      src/CFG/CFG.cpp
                       src/Generator/CFGGenerator/CFGCodeGen.cpp
+                      src/Generator/ISPCMacros.cpp
+                      src/CFG/CFG.cpp
                       src/Pass/PassManager.cpp
-                      src/Pass/Passes/PrintCFGPass.cpp)
+                      src/Pass/Passes/PrintCFGPass.cpp
+                      src/Pass/Passes/InsertISPCNodes.cpp
+)
 
 target_include_directories(spmdfy PRIVATE include
                                           third_party/json/include 

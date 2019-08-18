@@ -24,7 +24,7 @@ auto PassManager::initPassSequence() -> void {
     SPMDFY_INFO("===================================Initalizing Pass sequence===============================");
     // clang-format on
     std::apply(
-        [&](auto &... pass) -> void { (pass.set_opts(m_spmd_tutbl), ...); },
+        [&](auto &... pass) -> void { (pass.set_opts(m_spmd_tutbl, m_ast_context, m_workspace), ...); },
         pass_sequence);
 }
 
