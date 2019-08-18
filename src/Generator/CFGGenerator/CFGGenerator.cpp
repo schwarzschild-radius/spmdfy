@@ -29,6 +29,9 @@ auto CFGGenerator::handleTranslationUnit(clang::ASTContext &context) -> bool {
 
     m_spmd_tutbl = cfg.get();
 
+    pass::PassManager pm(m_context, m_spmd_tutbl);
+    pm.runPassSequence();
+
     codegen::CFGCodeGen generator(m_context, m_spmd_tutbl);
     m_file_writer << generator.get();
 

@@ -5,6 +5,7 @@
 #include <spmdfy/Generator/CFGGenerator/ConstructCFG.hpp>
 #include <spmdfy/Generator/CFGGenerator/CFG.hpp>
 #include <spmdfy/Generator/CFGGenerator/CFGCodeGen.hpp>
+#include <spmdfy/Pass/PassManager.hpp>
 #include <spmdfy/Logger.hpp>
 #include <spmdfy/utils.hpp>
 
