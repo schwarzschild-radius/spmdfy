@@ -36,6 +36,9 @@ std::string strJoin(Iter b, Iter e, char sep=','){
     return temp;
 }
 
+template <class... Ts> struct visitor : Ts... { using Ts::operator()...; };
+template <class... Ts> visitor(Ts...)->visitor<Ts...>;
+
 std::string getFileNameFromSource(std::string filepath);
 std::string getAbsoluteFilePath(const std::string &sFile, std::error_code &EC);
 

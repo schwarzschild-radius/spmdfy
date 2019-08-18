@@ -8,19 +8,19 @@ auto CFGCodeGen::get() -> std::string const {
     return traverseCFG();
 }
 
-auto CFGCodeGen::getFrom(CFG::CFGNode *) -> std::string const { return ""; }
+auto CFGCodeGen::getFrom(cfg::CFGNode *) -> std::string const { return ""; }
 
 auto CFGCodeGen::traverseCFG() -> std::string const {
     OStreamTy tu_gen;
     for (auto node : m_node) {
-        if (node->getNodeType() == CFG::CFGNode::KernelFunc) {
-            tu_gen << ispcCodeGen(dynamic_cast<CFG::KernelFuncNode *>(node));
+        if (node->getNodeType() == cfg::CFGNode::KernelFunc) {
+            tu_gen << ispcCodeGen(dynamic_cast<cfg::KernelFuncNode *>(node));
         }
     }
     return tu_gen.str();
 }
 
-auto CFGCodeGen::ispcCodeGen(CFG::InternalNode *internal) -> std::string {
+auto CFGCodeGen::ispcCodeGen(cfg::InternalNode *internal) -> std::string {
     SPMDFY_INFO("CodeGen InternalNode {}", internal->getName());
     OStreamTy internal_gen;
     const std::string &node_name = internal->getInternalNodeName();
@@ -34,16 +34,16 @@ auto CFGCodeGen::ispcCodeGen(CFG::InternalNode *internal) -> std::string {
     return internal_gen.str();
 }
 
-auto CFGCodeGen::ispcCodeGen(CFG::KernelFuncNode *kernel) -> std::string {
+auto CFGCodeGen::ispcCodeGen(cfg::KernelFuncNode *kernel) -> std::string {
     OStreamTy kernel_gen;
-    m_tu_context = CFG::CFGNode::Context::Kernel;
+    m_tu_context = cfg::CFGNode::Context::Kernel;
     kernel_gen << Visit(kernel->getKernelNode());
-    CFG::CFGNode *curr_node = kernel;
-    while (curr_node->getNodeType() != CFG::CFGNode::Exit) {
+    cfg::CFGNode *curr_node = kernel;
+    while (curr_node->getNodeType() != cfg::CFGNode::Exit) {
         SPMDFY_INFO("Current Internal node: {}", curr_node->getName());
-        if (curr_node->getNodeType() == CFG::CFGNode::Internal)
+        if (curr_node->getNodeType() == cfg::CFGNode::Internal)
             kernel_gen << ispcCodeGen(
-                dynamic_cast<CFG::InternalNode *>(curr_node));
+                dynamic_cast<cfg::InternalNode *>(curr_node));
         curr_node = curr_node->getNext();
     }
     kernel_gen << "}\n";
@@ -127,7 +127,7 @@ TYPE_DEF_VISITOR(Record, record) {
 DECL_DEF_VISITOR(ParmVar, param_decl) {
     SPMDFY_INFO("Visiting ParmVarDecl: {}", SRCDUMP(param_decl));
     OStreamTy param_gen;
-    if (m_tu_context == CFG::CFGNode::Context::Kernel) {
+    if (m_tu_context == cfg::CFGNode::Context::Kernel) {
         clang::QualType param_type = param_decl->getType();
         param_gen << "uniform ";
         if (param_type->isPointerType()) {
@@ -147,7 +147,7 @@ DECL_DEF_VISITOR(ParmVar, param_decl) {
 DECL_DEF_VISITOR(Var, var_decl) {
     SPMDFY_INFO("Visiting VarDecl: {}", SRCDUMP(var_decl));
     OStreamTy var_gen;
-    if (m_tu_context == CFG::CFGNode::Context::Global) {
+    if (m_tu_context == cfg::CFGNode::Context::Global) {
         var_gen << "const uniform ";
     } else if (var_decl->hasAttr<clang::CUDASharedAttr>()) {
         var_gen << "uniform ";
@@ -220,7 +220,7 @@ DECL_DEF_VISITOR(Function, func_decl) {
     SPMDFY_INFO("Visiting Function Decl {}", func_decl->getNameAsString());
     OStreamTy func_gen;
 
-    if (m_tu_context == CFG::CFGNode::Kernel) {
+    if (m_tu_context == cfg::CFGNode::Kernel) {
         func_gen << "ISPC_KERNEL(" << func_decl->getNameAsString();
         auto params = func_decl->parameters();
         for (auto param : params) {

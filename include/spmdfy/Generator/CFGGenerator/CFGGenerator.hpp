@@ -3,7 +3,7 @@
 
 #include <spmdfy/Generator/Generator.hpp>
 #include <spmdfy/Generator/CFGGenerator/ConstructCFG.hpp>
-#include <spmdfy/Generator/CFGGenerator/CFG.hpp>
+#include <spmdfy/CFG/CFG.hpp>
 #include <spmdfy/Generator/CFGGenerator/CFGCodeGen.hpp>
 #include <spmdfy/Pass/PassManager.hpp>
 #include <spmdfy/Logger.hpp>
@@ -44,7 +44,7 @@ class CFGGenerator : public ISPCGenerator {
     std::ostringstream &m_file_writer;
 
     // CFG specific variables
-    std::vector<CFG::CFGNode*> m_spmd_tutbl;
+    std::vector<cfg::CFGNode*> m_spmd_tutbl;
 };
 
 } // namespace spmdfy

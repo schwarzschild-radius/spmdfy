@@ -2,7 +2,7 @@
 #define SPMDFY_CONSTRUCTCFG_HPP
 
 #include <clang/AST/RecursiveASTVisitor.h>
-#include <spmdfy/Generator/CFGGenerator/CFG.hpp>
+#include <spmdfy/CFG/CFG.hpp>
 #include <spmdfy/Logger.hpp>
 #include <spmdfy/utils.hpp>
 
@@ -21,9 +21,9 @@ class ConstructSpmdCFG : public clang::RecursiveASTVisitor<ConstructSpmdCFG> {
     auto add(const clang::FunctionDecl*) -> bool;
     auto add(const clang::CXXRecordDecl*) -> bool;
 
-    auto splitEdge(CFG::CFGNode * node) -> bool;
+    auto splitEdge(cfg::CFGNode * node) -> bool;
 
-    auto get() -> std::vector<CFG::CFGNode*>;
+    auto get() -> std::vector<cfg::CFGNode*>;
 // visitors
 #define DEF_VISITOR(NODE, BASE)                                                \
     auto Visit##NODE##BASE(clang::NODE##BASE *)->bool;
@@ -46,9 +46,9 @@ class ConstructSpmdCFG : public clang::RecursiveASTVisitor<ConstructSpmdCFG> {
 
     // CFG variables
     size_t m_stmt_count = 0;
-    CFG::CFGNode *m_curr_node;
+    cfg::CFGNode *m_curr_node;
     std::vector<const clang::Decl*> m_cpp_tutbl;
-    std::vector<CFG::CFGNode*> m_spmdfy_tutbl;
+    std::vector<cfg::CFGNode*> m_spmdfy_tutbl;
 };
 } // namespace spmdfy
 

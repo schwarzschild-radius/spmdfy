@@ -5,7 +5,7 @@
 #include <tuple>
 #include <vector>
 
-#include <spmdfy/Generator/CFGGenerator/CFG.hpp>
+#include <spmdfy/CFG/CFG.hpp>
 #include <spmdfy/utils.hpp>
 
 #include <spmdfy/Pass/Passes/PrintCFGPass.hpp>
@@ -20,7 +20,7 @@ namespace pass {
 
 class PassManager {
   public:
-    using SpmdTUTy = std::vector<CFG::CFGNode *>;
+    using SpmdTUTy = std::vector<cfg::CFGNode *>;
 
     PassManager(clang::ASTContext &ast_context, SpmdTUTy &spmd_tutbl)
         : m_spmd_tutbl(spmd_tutbl), m_ast_context(ast_context),

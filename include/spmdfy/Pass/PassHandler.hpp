@@ -5,13 +5,13 @@
 #include <vector>
 
 #include <clang/AST/RecursiveASTVisitor.h>
-#include <spmdfy/Generator/CFGGenerator/CFG.hpp>
+#include <spmdfy/CFG/CFG.hpp>
 
 namespace spmdfy {
 
 namespace pass {
 
-using SpmdTUTy = std::vector<CFG::CFGNode *>;
+using SpmdTUTy = std::vector<cfg::CFGNode *>;
 
 #define PASS(FUNCTION, PASS_TYPE_NAME)                                         \
     struct PASS_TYPE_NAME {                                                    \

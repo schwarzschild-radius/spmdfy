@@ -2,7 +2,7 @@
 #define CFGCODEGEN_HPP
 
 #include <spmdfy/CUDA2ISPC.hpp>
-#include <spmdfy/Generator/CFGGenerator/CFG.hpp>
+#include <spmdfy/CFG/CFG.hpp>
 #include <spmdfy/Logger.hpp>
 #include <spmdfy/utils.hpp>
 
@@ -28,19 +28,19 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
   public:
     using OStreamTy = std::ostringstream;
     CFGCodeGen(clang::ASTContext &ast_context,
-               const std::vector<CFG::CFGNode *> &node)
+               const std::vector<cfg::CFGNode *> &node)
         : m_ast_context(ast_context), m_sm(ast_context.getSourceManager()),
           m_lang_opts(ast_context.getLangOpts()), m_node(node) {
         m_lang_opts.CPlusPlus = true;
         m_lang_opts.Bool = true;
     }
     auto get() -> std::string const;
-    auto getFrom(CFG::CFGNode *) -> std::string const;
+    auto getFrom(cfg::CFGNode *) -> std::string const;
     auto traverseCFG() -> std::string const;
 
     // ispc code generators
-    auto ispcCodeGen(CFG::KernelFuncNode *kernel) -> std::string;
-    auto ispcCodeGen(CFG::InternalNode *internal) -> std::string;
+    auto ispcCodeGen(cfg::KernelFuncNode *kernel) -> std::string;
+    auto ispcCodeGen(cfg::InternalNode *internal) -> std::string;
     auto getISPCBaseType(std::string type) -> std::string;
 
     // ispc code gen vistiors
@@ -69,9 +69,9 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
     clang::SourceManager &m_sm;
     clang::LangOptions m_lang_opts;
 
-    CFG::CFGNode::Context m_tu_context;
+    cfg::CFGNode::Context m_tu_context;
 
-    const std::vector<CFG::CFGNode *> m_node;
+    const std::vector<cfg::CFGNode *> m_node;
 };
 
 } // namespace codegen

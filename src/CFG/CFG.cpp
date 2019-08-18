@@ -1,8 +1,8 @@
-#include <spmdfy/Generator/CFGGenerator/CFG.hpp>
+#include <spmdfy/CFG/CFG.hpp>
 
 namespace spmdfy {
 
-namespace CFG {
+namespace cfg {
 
 auto CFGNode::getNodeTypeName() -> std::string const {
     switch (m_node_type) {

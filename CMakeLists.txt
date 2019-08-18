@@ -21,7 +21,7 @@ add_executable(spmdfy src/main.cpp
                       src/Generator/SimpleGenerator.cpp
                       src/Generator/CFGGenerator/CFGGenerator.cpp
                       src/Generator/CFGGenerator/ConstructCFG.cpp
-                      src/Generator/CFGGenerator/CFG.cpp
+                      src/CFG/CFG.cpp
                       src/Generator/CFGGenerator/CFGCodeGen.cpp
                       src/Pass/PassManager.cpp
                       src/Pass/Passes/PrintCFGPass.cpp)

@@ -21,7 +21,7 @@ DEF_CFG_VISITOR(Compound, Stmt, cpmd) {
 DEF_CFG_VISITOR(Decl, Stmt, decl_stmt) {
     for (auto decl : decl_stmt->decls()) {
         STMT_COUNT(SRCDUMP(decl), decl_stmt->getStmtClassName());
-        CFG::InternalNode *decl_node = new CFG::InternalNode(
+        cfg::InternalNode *decl_node = new cfg::InternalNode(
             m_context, llvm::cast<const clang::VarDecl>(decl));
         splitEdge(decl_node);
         break;
@@ -62,28 +62,28 @@ DEF_CFG_VISITOR(PseudoObject, Expr, pseudo) { return false; }
 
 DEF_CFG_VISITOR(CompoundAssign, Operator, assgn) {
     STMT_COUNT(SRCDUMP(assgn), assgn->getStmtClassName());
-    CFG::InternalNode *assgn_node = new CFG::InternalNode(m_context, assgn);
+    cfg::InternalNode *assgn_node = new cfg::InternalNode(m_context, assgn);
     splitEdge(assgn_node);
     return false;
 }
 
 DEF_CFG_VISITOR(Binary, Operator, binop) {
     STMT_COUNT(SRCDUMP(binop), binop->getStmtClassName());
-    CFG::InternalNode *binop_node = new CFG::InternalNode(m_context, binop);
+    cfg::InternalNode *binop_node = new cfg::InternalNode(m_context, binop);
     splitEdge(binop_node);
     return false;
 }
 
-auto ConstructSpmdCFG::get() -> std::vector<CFG::CFGNode *> {
+auto ConstructSpmdCFG::get() -> std::vector<cfg::CFGNode *> {
     return m_spmdfy_tutbl;
 }
 
 auto ConstructSpmdCFG::add(const clang::VarDecl *var_decl) -> bool {
-    m_spmdfy_tutbl.push_back(new CFG::GlobalVarNode(m_context, var_decl));
+    m_spmdfy_tutbl.push_back(new cfg::GlobalVarNode(m_context, var_decl));
     return true;
 }
 
-auto ConstructSpmdCFG::splitEdge(CFG::CFGNode *node) -> bool {
+auto ConstructSpmdCFG::splitEdge(cfg::CFGNode *node) -> bool {
     SPMDFY_INFO("Adding node {}", node->getNodeTypeName());
     if (m_curr_node == nullptr) {
         SPMDFY_ERROR("Current node is null");
@@ -97,10 +97,10 @@ auto ConstructSpmdCFG::splitEdge(CFG::CFGNode *node) -> bool {
     SPMDFY_INFO("Edge splitting from:");
     SPMDFY_INFO("{} -> {}", m_curr_node->getName(), next->getName());
     SPMDFY_INFO("to:");
-    node->setNext(next, CFG::CFGEdge::Complete);
-    m_curr_node->setNext(node, CFG::CFGEdge::Complete);
-    next->setPrevious(node, CFG::CFGEdge::Complete);
-    node->setPrevious(m_curr_node, CFG::CFGEdge::Complete);
+    node->setNext(next, cfg::CFGEdge::Complete);
+    m_curr_node->setNext(node, cfg::CFGEdge::Complete);
+    next->setPrevious(node, cfg::CFGEdge::Complete);
+    node->setPrevious(m_curr_node, cfg::CFGEdge::Complete);
     m_curr_node = node;
     SPMDFY_INFO("{} -> {} -> {}", m_curr_node->getPrevious()->getName(),
                 m_curr_node->getName(), m_curr_node->getNext()->getName());
@@ -108,10 +108,10 @@ auto ConstructSpmdCFG::splitEdge(CFG::CFGNode *node) -> bool {
 }
 
 auto ConstructSpmdCFG::add(const clang::FunctionDecl *func_decl) -> bool {
-    auto func = new CFG::KernelFuncNode(m_context, func_decl);
+    auto func = new cfg::KernelFuncNode(m_context, func_decl);
     m_curr_node = func;
-    auto func_exit = new CFG::ExitNode();
-    func->setNext(func_exit, CFG::CFGEdge::Complete);
+    auto func_exit = new cfg::ExitNode();
+    func->setNext(func_exit, cfg::CFGEdge::Complete);
     STMT_COUNT("Entry", "EntryNode");
     TraverseStmt(func_decl->getBody());
     STMT_COUNT("Exit", "ExitNode");
