@@ -10,6 +10,7 @@
 
 #include <spmdfy/Pass/Passes/PrintCFGPass.hpp>
 #include <spmdfy/Pass/Passes/InsertISPCNodes.hpp>
+#include <spmdfy/Pass/Passes/FindSyncthreadNodes.hpp>
 
 #include <spmdfy/Pass/PassSequence.hpp>
 #include <spmdfy/Pass/PassWorkspace.hpp>

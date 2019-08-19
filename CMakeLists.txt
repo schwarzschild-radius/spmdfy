@@ -27,6 +27,7 @@ add_executable(spmdfy src/main.cpp
                       src/Pass/PassManager.cpp
                       src/Pass/Passes/PrintCFGPass.cpp
                       src/Pass/Passes/InsertISPCNodes.cpp
+                      src/Pass/Passes/FindSyncthreadNodes.cpp
 )
 
 target_include_directories(spmdfy PRIVATE include

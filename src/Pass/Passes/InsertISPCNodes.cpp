@@ -4,6 +4,8 @@ namespace spmdfy {
 
 namespace pass {
 
+#define CASTAS(TYPE, NODE) dynamic_cast<TYPE>(NODE)
+
 bool insertISPCNodes(SpmdTUTy& spmd_tu, clang::ASTContext& ast_context, Workspace& workspace) {
     InsertISPCNode inserter(spmd_tu, ast_context, workspace);
     for (auto node : spmd_tu) {
@@ -18,16 +20,36 @@ bool insertISPCNodes(SpmdTUTy& spmd_tu, clang::ASTContext& ast_context, Workspac
     return false;
 }
 
-auto InsertISPCNode::handleKernelFunc(cfg::KernelFuncNode * kernel) -> bool{
-    auto curr_node = kernel->getNext();
-    kernel->splitEdge(new cfg::ISPCBlockNode());
-    kernel->splitEdge(new cfg::ISPCGridNode());
-    while(curr_node->getNodeType() != cfg::CFGNode::Exit){
-        curr_node = curr_node->getNext();
+auto walkBackTill(cfg::CFGNode * node) -> cfg::CFGNode *{
+    auto curr_node = node->getPrevious();
+    while(true){
+        SPMDFY_INFO("Walking back");
+        switch(curr_node->getNodeType()){
+            case cfg::CFGNode::Reconv:
+                curr_node = CASTAS(cfg::ReconvNode*, curr_node)->getBack()->getPrevious();
+            break;
+            case cfg::CFGNode::IfStmt:
+            case cfg::CFGNode::ForStmt:
+            case cfg::CFGNode::KernelFunc:
+                return curr_node;
+            default:
+                curr_node = curr_node->getPrevious();
+        }
     }
+    return nullptr;
+}
+
+auto InsertISPCNode::handleKernelFunc(cfg::KernelFuncNode * kernel) -> bool{
+    kernel->splitEdge(new cfg::ISPCGridNode());
+    auto curr_node = kernel->getNext();
+    auto sync_node = m_workspace.syncthrds_queue.front();
+    auto block_node = walkBackTill(sync_node);
+    if(block_node->getNodeType() == cfg::CFGNode::KernelFunc){
+        
+    }
+    SPMDFY_INFO("BlockNode : {}", block_node->getName());
     curr_node = curr_node->getPrevious();
     curr_node->splitEdge(new cfg::ISPCGridExitNode());
-    curr_node->splitEdge(new cfg::ISPCBlockExitNode());
     return false;
 }
 

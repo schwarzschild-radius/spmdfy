@@ -88,6 +88,8 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
     const cfg::SpmdTUTy& m_node;
 };
 
+#undef CFGNODE_VISITOR
+
 } // namespace codegen
 } // namespace spmdfy
 

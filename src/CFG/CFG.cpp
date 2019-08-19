@@ -72,24 +72,24 @@ auto CFGEdge::setEdgeType(Edge edge_type) -> bool {
 auto CFGNode::getName() -> std::string const { return "No Name"; }
 
 auto CFGNode::splitEdge(CFGNode *) -> bool {
-    SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
+    SPMDFY_ERROR("splitEdge supported operation for {}", getNodeTypeName());
     return true;
 }
 
 auto CFGNode::getNext() -> CFGNode *const {
-    SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
+    SPMDFY_ERROR("getNext supported operation for {}", getNodeTypeName());
     return nullptr;
 }
 auto CFGNode::getPrevious() -> CFGNode *const {
-    SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
+    SPMDFY_ERROR("getPrevious supported operation for {}", getNodeTypeName());
     return nullptr;
 }
 auto CFGNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
-    SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
+    SPMDFY_ERROR("setNext supported operation for {}", getNodeTypeName());
     return true;
 }
 auto CFGNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
-    SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
+    SPMDFY_ERROR("setPrevious supported operation for {}", getNodeTypeName());
     return true;
 }
 

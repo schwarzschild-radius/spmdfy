@@ -22,7 +22,7 @@ auto CFGGenerator::handleTranslationUnit(clang::ASTContext &context) -> bool {
                 SPMDFY_ERROR("Unable to add FunctionDecl");
             break;
         default:
-            SPMDFY_ERROR("Declaration not supported yet!");
+            SPMDFY_ERROR("{} not supported yet!", D->getDeclKindName());
             break;
         }
     }
