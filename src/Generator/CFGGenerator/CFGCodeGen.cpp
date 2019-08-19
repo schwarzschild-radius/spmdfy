@@ -12,7 +12,7 @@ auto CFGCodeGen::getFrom(cfg::CFGNode *) -> std::string const { return ""; }
 
 auto CFGCodeGen::traverseCFG() -> std::string const {
     OStreamTy tu_gen;
-    tu_gen << ispc_macros;
+    // tu_gen << ispc_macros;
     for (auto node : m_node) {
         tu_gen << Visit(node);
     }
@@ -29,6 +29,8 @@ auto CFGCodeGen::traverseCFG() -> std::string const {
 #define TYPE_DEF_VISITOR(NODE, NAME) DEF_VISITOR(NODE, Type, NAME)
 #define CFGNODE_DEF_VISITOR(NODE, NAME)                                        \
     auto CFGCodeGen::Visit##NODE##Node(cfg::NODE##Node *NAME)->std::string
+
+#define CASTAS(TYPE, NODE) dynamic_cast<TYPE>(NODE)
 
 auto rmCastIf(const clang::Expr *expr) -> const clang::Expr * {
     if (llvm::isa<const clang::ImplicitCastExpr>(expr)) {
@@ -211,10 +213,86 @@ CFGNODE_DEF_VISITOR(KernelFunc, kernel) {
     while (curr_node->getNodeType() != cfg::CFGNode::Exit) {
         SPMDFY_INFO("Current Internal node: {}", curr_node->getName());
         kernel_gen << Visit(curr_node);
+        if (curr_node->getNodeType() == cfg::CFGNode::IfStmt) {
+            if (CASTAS(cfg::IfStmtNode *, curr_node)) {
+                curr_node = CASTAS(cfg::IfStmtNode *, curr_node)->getReconv();
+                SPMDFY_INFO("Casting to IfStmtNode");
+            }
+        }
+        if (curr_node->getNodeType() == cfg::CFGNode::ForStmt) {
+            if (CASTAS(cfg::ForStmtNode *, curr_node)) {
+                curr_node = CASTAS(cfg::ForStmtNode *, curr_node)->getReconv();
+                SPMDFY_INFO("Casting to ForStmtNode");
+            }
+        }
         curr_node = curr_node->getNext();
     }
     kernel_gen << "}\n";
     return kernel_gen.str();
+}
+
+CFGNODE_DEF_VISITOR(IfStmt, ifstmt) {
+    SPMDFY_INFO("CodeGen IfStmt Node");
+    OStreamTy ifstmt_gen;
+
+    auto if_stmt = ifstmt->getIfStmt();
+    ifstmt_gen << "if (";
+    auto *if_cond = if_stmt->getCond();
+    if (if_cond) {
+        ifstmt_gen << sourceDump(m_sm, m_lang_opts,
+                                 if_cond->getSourceRange().getBegin(),
+                                 if_cond->getSourceRange().getEnd())
+                   << ")";
+    }
+    ifstmt_gen << "{\n";
+    SPMDFY_INFO("Generating True block");
+    for (auto curr_node = ifstmt->getNext();
+         curr_node->getNodeType() != cfg::CFGNode::Reconv;
+         curr_node = curr_node->getNext()) {
+        ifstmt_gen << Visit(curr_node);
+        if (curr_node->getNodeType() == cfg::CFGNode::IfStmt) {
+            if (CASTAS(cfg::IfStmtNode *, curr_node)) {
+                curr_node = CASTAS(cfg::IfStmtNode *, curr_node)->getReconv();
+                continue;
+            }
+        }
+    }
+
+    SPMDFY_INFO("Generating Else block");
+    for (auto curr_node = ifstmt->getFalseBlock();
+         curr_node->getNodeType() != cfg::CFGNode::Reconv;
+         curr_node = curr_node->getNext()) {
+        ifstmt_gen << Visit(curr_node);
+    }
+    ifstmt_gen << "}\n";
+
+    return ifstmt_gen.str();
+}
+
+CFGNODE_DEF_VISITOR(ForStmt, forstmt) {
+    SPMDFY_INFO("Codegen ForStmt {}", forstmt->getName());
+    OStreamTy for_gen;
+
+    auto for_stmt = forstmt->getForStmt();
+    auto for_body = for_stmt->getBody();
+
+    for_gen << sourceDump(m_sm, m_lang_opts,
+                          for_stmt->getSourceRange().getBegin(),
+                          for_body->getSourceRange().getBegin());
+    for (auto curr_node = forstmt->getNext();
+         curr_node->getNodeType() != cfg::CFGNode::Reconv;
+         curr_node = curr_node->getNext()) {
+        SPMDFY_INFO("ForStmt Codegen {}", curr_node->getNodeTypeName());
+        for_gen << Visit(curr_node);
+        if (curr_node->getNodeType() == cfg::CFGNode::IfStmt) {
+            if (CASTAS(cfg::IfStmtNode *, curr_node)) {
+                curr_node = CASTAS(cfg::IfStmtNode *, curr_node)->getReconv();
+                continue;
+            }
+        }
+    }
+    for_gen << "}\n";
+    return for_gen.str();
 }
 
 CFGNODE_DEF_VISITOR(Internal, internal) {
@@ -232,22 +310,22 @@ CFGNODE_DEF_VISITOR(Internal, internal) {
     return internal_gen.str();
 }
 
-CFGNODE_DEF_VISITOR(ISPCBlock, ispc_block){
+CFGNODE_DEF_VISITOR(ISPCBlock, ispc_block) {
     SPMDFY_INFO("CodeGen ISPCBlock Node");
     return "ISPC_BLOCK_START\n";
 }
 
-CFGNODE_DEF_VISITOR(ISPCBlockExit, ispc_block){
+CFGNODE_DEF_VISITOR(ISPCBlockExit, ispc_block) {
     SPMDFY_INFO("CodeGen ISPCBlockExit Node");
     return "ISPC_BLOCK_END\n";
 }
 
-CFGNODE_DEF_VISITOR(ISPCGrid, ispc_block){
+CFGNODE_DEF_VISITOR(ISPCGrid, ispc_block) {
     SPMDFY_INFO("CodeGen ISPCGrid Node");
     return "ISPC_GRID_START\n";
 }
 
-CFGNODE_DEF_VISITOR(ISPCGridExit, ispc_block){
+CFGNODE_DEF_VISITOR(ISPCGridExit, ispc_block) {
     SPMDFY_INFO("CodeGen ISPCGridExit Node");
     return "ISPC_GRID_END\n";
 }

@@ -12,6 +12,12 @@ auto CFGNode::getNodeTypeName() -> std::string const {
         return "KernelFuncNode";
     case Internal:
         return "InternalNode";
+    case IfStmt:
+        return "IfStmtNode";
+    case ForStmt:
+        return "ForStmtNode";
+    case Reconv:
+        return "ReconvNode";
     case Exit:
         return "ExitNode";
     case ISPCBlock:
@@ -48,7 +54,7 @@ auto CFGEdge::getEdgeTypeName() -> std::string const {
 }
 
 auto CFGEdge::getTerminal() -> CFGNode *const {
-    SPMDFY_INFO("Getting terminal node {}", m_terminal->getName());
+    // SPMDFY_INFO("Getting terminal node {}", m_terminal->getName());
     return m_terminal;
 }
 
@@ -62,6 +68,31 @@ auto CFGEdge::setEdgeType(Edge edge_type) -> bool {
     m_edge = edge_type;
     return false;
 }
+
+auto CFGNode::getName() -> std::string const { return "No Name"; }
+
+auto CFGNode::splitEdge(CFGNode *) -> bool {
+    SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
+    return true;
+}
+
+auto CFGNode::getNext() -> CFGNode *const {
+    SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
+    return nullptr;
+}
+auto CFGNode::getPrevious() -> CFGNode *const {
+    SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
+    return nullptr;
+}
+auto CFGNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
+    SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
+    return true;
+}
+auto CFGNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
+    SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
+    return true;
+}
+
 // CFGEdge
 
 auto KernelFuncNode::getNext() -> CFGNode *const { return next->getTerminal(); }
@@ -83,20 +114,187 @@ auto KernelFuncNode::getDeclKindString() -> std::string const {
     return temp;
 }
 
-auto KernelFuncNode::splitEdge(CFGNode* node) -> bool{
+auto KernelFuncNode::splitEdge(CFGNode *node) -> bool {
     auto nxt = next->getTerminal();
-    if(nxt == nullptr){
+    if (nxt == nullptr) {
         SPMDFY_ERROR("[{}] Cannot Split Edge as next node is null", getName());
         return true;
     }
+    SPMDFY_INFO("Edge splitting from:");
+    SPMDFY_INFO("{} -> {}", getName(), nxt->getName());
+    SPMDFY_INFO("to:");
     node->setNext(nxt, cfg::CFGEdge::Complete);
     next->setTerminal(node, cfg::CFGEdge::Complete);
     nxt->setPrevious(node, cfg::CFGEdge::Complete);
-    node->setPrevious(next->getTerminal(), cfg::CFGEdge::Complete);
+    node->setPrevious(this, cfg::CFGEdge::Complete);
+    SPMDFY_INFO("{} -> {} -> {}", node->getPrevious()->getName(),
+                node->getName(), node->getNext()->getName());
     return false;
 }
 
 // KernelFuncNode
+
+auto IfStmtNode::getName() -> std::string const {
+    auto &m_sm = m_ast_context.getSourceManager();
+    auto &m_lang_opts = m_ast_context.getLangOpts();
+    return SRCDUMP(m_if_stmt);
+}
+auto IfStmtNode::splitEdge(CFGNode *node) -> bool {
+    return splitTrueEdge(node);
+}
+auto IfStmtNode::getNext() -> CFGNode *const { return true_b->getTerminal(); }
+auto IfStmtNode::getPrevious() -> CFGNode *const { return prev->getTerminal(); }
+auto IfStmtNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
+    return setTrueBlock(node, edge_type);
+}
+auto IfStmtNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
+    return prev->setTerminal(node, edge_type);
+}
+
+auto IfStmtNode::getReconv() -> CFGNode * const { return reconv->getTerminal(); };
+
+auto IfStmtNode::setReconv(CFGNode * node, CFGEdge::Edge edge_type) -> bool{
+    return reconv->setTerminal(node, edge_type);
+}
+
+auto IfStmtNode::splitTrueEdge(CFGNode *node) -> bool {
+    SPMDFY_INFO("Splitting True Edge");
+    auto nxt = true_b->getTerminal();
+    if (nxt == nullptr) {
+        SPMDFY_ERROR("[{}] Cannot Split Edge as next node is null", getName());
+        return true;
+    }
+    SPMDFY_INFO("Edge splitting from:");
+    SPMDFY_INFO("{} -> {}", "IfStmtNode", nxt->getName());
+    SPMDFY_INFO("to:");
+    node->setNext(nxt, cfg::CFGEdge::Complete);
+    true_b->setTerminal(node, cfg::CFGEdge::Complete);
+    nxt->setPrevious(node, cfg::CFGEdge::Complete);
+    node->setPrevious(this, cfg::CFGEdge::Complete);
+    SPMDFY_INFO("{} -> {} -> {}", node->getPrevious()->getName(),
+                node->getName(), node->getNext()->getName());
+    return false;
+}
+auto IfStmtNode::splitFalseEdge(CFGNode *node) -> bool {
+    SPMDFY_INFO("Splitting False Edge");
+    auto nxt = false_b->getTerminal();
+    if (nxt == nullptr) {
+        SPMDFY_ERROR("[{}] Cannot Split Edge as next node is null", getName());
+        return true;
+    }
+    SPMDFY_INFO("Edge splitting from:");
+    SPMDFY_INFO("{} -> {}", "IfStmtNode", nxt->getName());
+    SPMDFY_INFO("to:");
+    node->setNext(nxt, cfg::CFGEdge::Complete);
+    false_b->setTerminal(node, cfg::CFGEdge::Complete);
+    nxt->setPrevious(node, cfg::CFGEdge::Complete);
+    node->setPrevious(this, cfg::CFGEdge::Complete);
+    SPMDFY_INFO("{} -> {} -> {}", node->getPrevious()->getName(),
+                node->getName(), node->getNext()->getName());
+    return false;
+}
+
+auto IfStmtNode::getTrueBlock() -> CFGNode* const{
+    return true_b->getTerminal();
+}
+auto IfStmtNode::getFalseBlock() -> CFGNode* const{
+    return false_b->getTerminal();
+}
+
+auto IfStmtNode::setTrueBlock(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
+    return true_b->setTerminal(node, edge_type);
+}
+auto IfStmtNode::setFalseBlock(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
+    return false_b->setTerminal(node, edge_type);
+}
+
+// IfStmtNode
+
+auto ForStmtNode::getName() -> std::string const{
+    auto &m_sm = m_ast_context.getSourceManager();
+    auto &m_lang_opts = m_ast_context.getLangOpts();
+    return SRCDUMP(m_for_stmt);
+}
+auto ForStmtNode::splitEdge(CFGNode * node) -> bool{
+    SPMDFY_INFO("Splitting True Edge");
+    auto nxt = true_b->getTerminal();
+    if (nxt == nullptr) {
+        SPMDFY_ERROR("[{}] Cannot Split Edge as next node is null", getName());
+        return true;
+    }
+    SPMDFY_INFO("Edge splitting from:");
+    SPMDFY_INFO("{} -> {}", "ForStmtNode", nxt->getName());
+    SPMDFY_INFO("to:");
+    node->setNext(nxt, cfg::CFGEdge::Complete);
+    true_b->setTerminal(node, cfg::CFGEdge::Complete);
+    nxt->setPrevious(node, cfg::CFGEdge::Complete);
+    node->setPrevious(this, cfg::CFGEdge::Complete);
+    SPMDFY_INFO("{} -> {} -> {}", node->getPrevious()->getName(),
+                node->getName(), node->getNext()->getName());
+    return false;
+}
+
+auto ForStmtNode::getNext() -> CFGNode *const{
+    return true_b->getTerminal();
+}
+auto ForStmtNode::getPrevious() -> CFGNode *const{
+    return prev->getTerminal();
+}
+auto ForStmtNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool{
+    return true_b->setTerminal(node, edge_type);
+}
+auto ForStmtNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool{
+    return prev->setTerminal(node, edge_type);
+}
+auto ForStmtNode::getReconv() -> CFGNode * const{
+    return reconv->getTerminal();
+}
+auto ForStmtNode::setReconv(CFGNode * node, CFGEdge::Edge edge_type) -> bool{
+    return reconv->setTerminal(node, edge_type);
+}
+
+// ForStmtNode
+
+auto ReconvNode::getName() -> std::string const { return "ReconvNode"; }
+
+auto ReconvNode::splitEdge(CFGNode *node) -> bool {
+    auto nxt = next->getTerminal();
+    if (nxt == nullptr) {
+        SPMDFY_ERROR("[{}] Cannot Split Edge as next node is null", getName());
+        return true;
+    }
+    SPMDFY_INFO("Edge splitting from:");
+    SPMDFY_INFO("{} -> {}", getName(), nxt->getName());
+    SPMDFY_INFO("to:");
+    node->setNext(nxt, cfg::CFGEdge::Complete);
+    next->setTerminal(node, cfg::CFGEdge::Complete);
+    nxt->setPrevious(node, cfg::CFGEdge::Complete);
+    node->setPrevious(this, cfg::CFGEdge::Complete);
+    SPMDFY_INFO("{} -> {} -> {}", node->getPrevious()->getName(),
+                node->getName(), node->getNext()->getName());
+    return false;
+}
+
+auto ReconvNode::getNext() -> CFGNode *const { return next->getTerminal(); }
+
+auto ReconvNode::getPrevious() -> CFGNode *const { return back->getTerminal(); }
+
+auto ReconvNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
+    return next->setTerminal(node, edge_type);
+}
+
+auto ReconvNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
+    return false;
+}
+
+auto ReconvNode::setBack(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
+    return back->setTerminal(node, edge_type);
+}
+
+auto ReconvNode::getBack() -> CFGNode *const { return back->getTerminal(); }
+
+// ReconvNode
+
 auto InternalNode::getNext() -> CFGNode *const { return next->getTerminal(); }
 
 auto InternalNode::getPrevious() -> CFGNode *const {
@@ -154,16 +352,21 @@ auto InternalNode::getName() -> std::string const {
         m_node);
 }
 
-auto InternalNode::splitEdge(CFGNode* node) -> bool{
+auto InternalNode::splitEdge(CFGNode *node) -> bool {
     auto nxt = next->getTerminal();
-    if(nxt == nullptr){
+    if (nxt == nullptr) {
         SPMDFY_ERROR("[{}] Cannot Split Edge as next node is null", getName());
         return true;
     }
+    SPMDFY_INFO("Edge splitting from:");
+    SPMDFY_INFO("{} -> {}", getName(), nxt->getName());
+    SPMDFY_INFO("to:");
     node->setNext(nxt, cfg::CFGEdge::Complete);
     next->setTerminal(node, cfg::CFGEdge::Complete);
     nxt->setPrevious(node, cfg::CFGEdge::Complete);
-    node->setPrevious(next->getTerminal(), cfg::CFGEdge::Complete);
+    node->setPrevious(this, cfg::CFGEdge::Complete);
+    SPMDFY_INFO("{} -> {} -> {}", node->getPrevious()->getName(),
+                node->getName(), node->getNext()->getName());
     return false;
 }
 
@@ -239,7 +442,6 @@ auto ISPCBlockExitNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type)
 
 // ISPCBlockExitNode
 
-
 auto ISPCGridNode::getName() -> std::string const { return "ISPCGrid"; }
 
 auto ISPCGridNode::getNext() -> CFGNode *const { return next->getTerminal(); }
@@ -257,8 +459,7 @@ auto ISPCGridNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
                 next->getTerminal()->getName(), next->getEdgeTypeName());
     return false;
 }
-auto ISPCGridNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type)
-    -> bool {
+auto ISPCGridNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
     if (prev->setTerminal(node, edge_type)) {
         return true;
     }
@@ -270,17 +471,14 @@ auto ISPCGridNode::setPrevious(CFGNode *node, CFGEdge::Edge edge_type)
 
 // ISPCGridNode
 
-auto ISPCGridExitNode::getName() -> std::string const {
-    return "ISPCGridExit";
-}
+auto ISPCGridExitNode::getName() -> std::string const { return "ISPCGridExit"; }
 auto ISPCGridExitNode::getNext() -> CFGNode *const {
     return next->getTerminal();
 }
 auto ISPCGridExitNode::getPrevious() -> CFGNode *const {
     return prev->getTerminal();
 }
-auto ISPCGridExitNode::setNext(CFGNode *node, CFGEdge::Edge edge_type)
-    -> bool {
+auto ISPCGridExitNode::setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
     if (next->setTerminal(node, edge_type)) {
         return true;
     }

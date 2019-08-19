@@ -46,6 +46,7 @@ class CFGNode {
         DeviceFunc,
         IfStmt,
         ForStmt,
+        Reconv,
         Internal,
         Exit,
         ISPCBlock,
@@ -55,37 +56,22 @@ class CFGNode {
     };
     enum Context { Global, Kernel, Device };
     // getters
-    virtual auto getNodeType() -> Node const { return m_node_type; }
-    virtual auto getContextType() -> Context const { return m_context; }
+    auto getNodeType() -> Node const { return m_node_type; }
+    auto getContextType() -> Context const { return m_context; }
+    auto setContext(Context &context) -> bool {
+        m_context = context;
+        return false;
+    }
     auto getNodeTypeName() -> std::string const;
     auto getContextTypeName() -> std::string const;
 
     // virtual methods
-    virtual auto getName() -> std::string const {
-        return "No Name";
-    }
-
-    virtual auto splitEdge(CFGNode*) -> bool{
-        SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
-        return true;
-    }
-
-    virtual auto getNext() -> CFGNode *const {
-        SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
-        return nullptr;
-    }
-    virtual auto getPrevious() -> CFGNode *const {
-        SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
-        return nullptr;
-    }
-    virtual auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
-        SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
-        return true;
-    }
-    virtual auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool {
-        SPMDFY_ERROR("Not supported operation for {}", getNodeTypeName());
-        return true;
-    }
+    virtual auto getName() -> std::string const;
+    virtual auto splitEdge(CFGNode *) -> bool;
+    virtual auto getNext() -> CFGNode *const;
+    virtual auto getPrevious() -> CFGNode *const;
+    virtual auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool;
+    virtual auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool;
 
   protected:
     Context m_context;
@@ -113,7 +99,7 @@ class GlobalVarNode : public CFGNode {
 
   private:
     const clang::VarDecl *m_var_decl;
-    
+
     // AST context
     clang::ASTContext &m_ast_context;
 };
@@ -130,13 +116,13 @@ class KernelFuncNode : public CFGNode {
         next = new CFGEdge();
     }
 
-    auto splitEdge(CFGNode*) -> bool override;
+    auto splitEdge(CFGNode *) -> bool override;
     auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
     auto getNext() -> CFGNode *const override;
-    auto getName() -> std::string const override{
+    auto getName() -> std::string const override {
         return m_func_decl->getNameAsString();
     }
-    auto getKernelNode() -> const clang::FunctionDecl * const{
+    auto getKernelNode() -> const clang::FunctionDecl *const {
         return m_func_decl;
     }
     auto getDeclKindString() -> std::string const;
@@ -147,6 +133,104 @@ class KernelFuncNode : public CFGNode {
 
     // AST context
     clang::ASTContext &m_ast_context;
+};
+
+class IfStmtNode : public CFGNode {
+  public:
+    IfStmtNode(clang::ASTContext &ast_context, const clang::IfStmt *if_stmt)
+        : m_ast_context(ast_context) {
+        m_if_stmt = if_stmt;
+        m_node_type = IfStmt;
+        m_context = Kernel;
+        true_b = new CFGEdge();
+        false_b = new CFGEdge();
+        prev = new CFGEdge();
+        reconv = new CFGEdge();
+    }
+
+    // virtual methods
+    auto getName() -> std::string const override;
+    auto splitEdge(CFGNode *) -> bool override;
+    auto getNext() -> CFGNode *const override;
+    auto getPrevious() -> CFGNode *const override;
+    auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+    auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+
+    // getters
+    auto getIfStmt() -> const clang::IfStmt *const { return m_if_stmt; }
+    auto getReconv() -> CFGNode * const;
+    auto setReconv(CFGNode *, CFGEdge::Edge) -> bool;
+    auto splitTrueEdge(CFGNode *) -> bool;
+    auto splitFalseEdge(CFGNode *) -> bool;
+    auto getTrueBlock() -> CFGNode * const;
+    auto getFalseBlock() -> CFGNode * const;
+    auto setTrueBlock(CFGNode *node, CFGEdge::Edge edge_type) -> bool;
+    auto setFalseBlock(CFGNode *node, CFGEdge::Edge edge_type) -> bool;
+
+  private:
+    const clang::IfStmt *m_if_stmt;
+    CFGEdge *true_b, *false_b;
+    CFGEdge *prev, *reconv;
+
+    clang::ASTContext &m_ast_context;
+};
+
+class ForStmtNode : public CFGNode {
+  public:
+    ForStmtNode(clang::ASTContext &ast_context, const clang::ForStmt *for_stmt)
+        : m_ast_context(ast_context) {
+        m_for_stmt = for_stmt;
+        m_node_type = ForStmt;
+        m_context = Kernel;
+        true_b = new CFGEdge();
+        prev = new CFGEdge();
+        reconv = new CFGEdge();
+    }
+
+    // virtual methods
+    auto getName() -> std::string const override;
+    auto splitEdge(CFGNode *) -> bool override;
+    auto getNext() -> CFGNode *const override;
+    auto getPrevious() -> CFGNode *const override;
+    auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+    auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+
+    // getters
+    auto getForStmt() -> const clang::ForStmt *const { return m_for_stmt; }
+    auto getReconv() -> CFGNode * const;
+    auto setReconv(CFGNode *, CFGEdge::Edge) -> bool;
+
+  private:
+    const clang::ForStmt *m_for_stmt;
+    CFGEdge *true_b;
+    CFGEdge *prev, *reconv;
+
+    clang::ASTContext &m_ast_context;
+};
+
+class ReconvNode : public CFGNode {
+  public:
+    ReconvNode() {
+        m_node_type = Reconv;
+        m_context = Kernel;
+        next = new CFGEdge();
+        back = new CFGEdge();
+    }
+
+    // overrie methods
+    auto getName() -> std::string const override;
+    auto splitEdge(CFGNode *) -> bool override;
+    auto getNext() -> CFGNode *const override;
+    auto getPrevious() -> CFGNode *const override;
+    auto setNext(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+    auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
+
+    // getters
+    auto setBack(CFGNode *node, CFGEdge::Edge edge_type) -> bool;
+    auto getBack() -> CFGNode *const;
+
+  private:
+    CFGEdge *next, *back;
 };
 
 class InternalNode : public CFGNode {
@@ -164,18 +248,25 @@ class InternalNode : public CFGNode {
 
     // getters
     auto getInternalNodeName() -> std::string const;
-    template<typename ASTNodeTy>
-    auto getInternalNodeAs() -> ASTNodeTy*{
-        return std::visit(visitor{
-            [](const clang::Decl *decl) { return reinterpret_cast<ASTNodeTy*>(decl); },
-            [](const clang::Stmt *stmt) { return reinterpret_cast<ASTNodeTy*>(stmt); },
-            [](const clang::Expr *expr) { return reinterpret_cast<ASTNodeTy*>(expr); },
-            [](const clang::Type *type) { return reinterpret_cast<ASTNodeTy*>(type); }}
-        , m_node);
+    template <typename ASTNodeTy> auto getInternalNodeAs() -> ASTNodeTy * {
+        return std::visit(
+            visitor{[](const clang::Decl *decl) {
+                        return reinterpret_cast<ASTNodeTy *>(decl);
+                    },
+                    [](const clang::Stmt *stmt) {
+                        return reinterpret_cast<ASTNodeTy *>(stmt);
+                    },
+                    [](const clang::Expr *expr) {
+                        return reinterpret_cast<ASTNodeTy *>(expr);
+                    },
+                    [](const clang::Type *type) {
+                        return reinterpret_cast<ASTNodeTy *>(type);
+                    }},
+            m_node);
     }
 
     // override
-    auto splitEdge(CFGNode*) -> bool override;
+    auto splitEdge(CFGNode *) -> bool override;
     auto getName() -> std::string const override;
     auto getNext() -> CFGNode *const override;
     auto getPrevious() -> CFGNode *const override;
@@ -192,24 +283,22 @@ class InternalNode : public CFGNode {
 
 class ExitNode : public CFGNode {
   public:
-    ExitNode(){
+    ExitNode() {
         SPMDFY_INFO("Creating ExitNode");
         m_node_type = Exit;
         prev = new CFGEdge();
     }
     auto getPrevious() -> CFGNode *const override;
     auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type) -> bool override;
-    auto getName() -> std::string const override {
-        return "Exit";
-    }
+    auto getName() -> std::string const override { return "Exit"; }
 
   private:
     CFGEdge *prev;
 };
 
-class ISPCBlockNode: public CFGNode{
+class ISPCBlockNode : public CFGNode {
   public:
-    ISPCBlockNode(){
+    ISPCBlockNode() {
         SPMDFY_INFO("Creating ISPCBlockNode");
         m_node_type = ISPCBlock;
         m_context = Kernel;
@@ -228,9 +317,9 @@ class ISPCBlockNode: public CFGNode{
     CFGEdge *prev, *next;
 };
 
-class ISPCBlockExitNode: public CFGNode{
+class ISPCBlockExitNode : public CFGNode {
   public:
-    ISPCBlockExitNode(){
+    ISPCBlockExitNode() {
         SPMDFY_INFO("Creating ISPCBlockExitNode");
         m_node_type = ISPCBlockExit;
         m_context = Kernel;
@@ -238,7 +327,7 @@ class ISPCBlockExitNode: public CFGNode{
         next = new CFGEdge();
     }
 
-    // override 
+    // override
     auto getName() -> std::string const override;
     auto getNext() -> CFGNode *const override;
     auto getPrevious() -> CFGNode *const override;
@@ -249,10 +338,9 @@ class ISPCBlockExitNode: public CFGNode{
     CFGEdge *prev, *next;
 };
 
-
-class ISPCGridNode: public CFGNode{
+class ISPCGridNode : public CFGNode {
   public:
-    ISPCGridNode(){
+    ISPCGridNode() {
         SPMDFY_INFO("Creating ISPCGridNode");
         m_node_type = ISPCGrid;
         m_context = Kernel;
@@ -271,9 +359,9 @@ class ISPCGridNode: public CFGNode{
     CFGEdge *prev, *next;
 };
 
-class ISPCGridExitNode: public CFGNode{
+class ISPCGridExitNode : public CFGNode {
   public:
-    ISPCGridExitNode(){
+    ISPCGridExitNode() {
         SPMDFY_INFO("Creating ISPCGridExitNode");
         m_node_type = ISPCGridExit;
         m_context = Kernel;
@@ -281,7 +369,7 @@ class ISPCGridExitNode: public CFGNode{
         next = new CFGEdge();
     }
 
-    // override 
+    // override
     auto getName() -> std::string const override;
     auto getNext() -> CFGNode *const override;
     auto getPrevious() -> CFGNode *const override;
@@ -292,7 +380,7 @@ class ISPCGridExitNode: public CFGNode{
     CFGEdge *prev, *next;
 };
 
-} // namespace CFG
+} // namespace cfg
 
 } // namespace spmdfy
 

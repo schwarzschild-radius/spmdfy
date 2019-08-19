@@ -69,6 +69,8 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
     TYPE_VISITOR(IncompleteArray);
 
     CFGNODE_VISITOR(KernelFunc);
+    CFGNODE_VISITOR(IfStmt);
+    CFGNODE_VISITOR(ForStmt);
     CFGNODE_VISITOR(Internal);
     CFGNODE_VISITOR(ISPCBlock);
     CFGNODE_VISITOR(ISPCBlockExit);

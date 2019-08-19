@@ -34,8 +34,28 @@ DEF_CFG_VISITOR(For, Stmt, for_stmt) {
                           for_stmt->getRParenLoc()),
                for_stmt->getStmtClassName());
 
+    // 1. Create for node
+    cfg::ForStmtNode *for_node = new cfg::ForStmtNode(m_context, for_stmt);
+
+    // 2. Inserting for node
+    m_curr_node->splitEdge(for_node);
+    m_curr_node = for_node;
+
+    // 3. Creating reconv node
+    cfg::ReconvNode *reconv = new cfg::ReconvNode();
+    reconv->setBack(for_node, cfg::CFGEdge::Complete);
+
+    // 4. Setting for's True to point to reconv
+    for_node->splitEdge(reconv);
+
+    // 5. Setting for to point to reconv
+    for_node->setReconv(reconv, cfg::CFGEdge::Complete);
+
     TraverseStmt(for_stmt->getBody());
     STMT_COUNT("Reconv }", "ReconvNode");
+    
+    // 6. Setting reconv as current
+    m_curr_node = reconv;
 
     return false;
 }
@@ -44,17 +64,46 @@ DEF_CFG_VISITOR(If, Stmt, if_stmt) {
     STMT_COUNT(sourceDump(m_sm, m_lang_opts, if_stmt->getBeginLoc(),
                           if_stmt->getCond()->getEndLoc()),
                if_stmt->getStmtClassName());
+    // 1. Creating if node
+    cfg::IfStmtNode *if_node = new cfg::IfStmtNode(m_context, if_stmt);
 
-    if (if_stmt->getThen())
+    // 2. Inserting if node
+    m_curr_node->splitEdge(if_node);
+    m_curr_node = if_node;
+
+    // 3. Creating reconv node
+    cfg::ReconvNode *reconv = new cfg::ReconvNode();
+    reconv->setBack(if_node, cfg::CFGEdge::Complete);
+
+    // 4. Setting if's True to point to reconv
+    if_node->splitEdge(reconv);
+
+    // 5. Setting if's False to point to reconv
+    if_node->setFalseBlock(reconv, cfg::CFGEdge::Complete);
+
+    // 6. Setting if to point to reconv
+    if_node->setReconv(reconv, cfg::CFGEdge::Complete);
+
+    if (if_stmt->getThen()) {
         TraverseStmt(if_stmt->getThen());
-    if (if_stmt->getElse())
+    }
+
+    if (if_stmt->getElse()) {
         TraverseStmt(if_stmt->getElse());
+    }
+
     STMT_COUNT("Reconv }", "ReconvNode");
+
+    // 7. Setting current node as Reconv
+    m_curr_node = reconv;
     return false;
 }
 
 DEF_CFG_VISITOR(Call, Expr, call) {
     STMT_COUNT(SRCDUMP(call), call->getStmtClassName());
+    cfg::InternalNode *call_node = new cfg::InternalNode(m_context, call);
+    m_curr_node->splitEdge(call_node);
+    m_curr_node = call_node;
     return false;
 }
 
@@ -63,14 +112,16 @@ DEF_CFG_VISITOR(PseudoObject, Expr, pseudo) { return false; }
 DEF_CFG_VISITOR(CompoundAssign, Operator, assgn) {
     STMT_COUNT(SRCDUMP(assgn), assgn->getStmtClassName());
     cfg::InternalNode *assgn_node = new cfg::InternalNode(m_context, assgn);
-    splitEdge(assgn_node);
+    m_curr_node->splitEdge(assgn_node);
+    m_curr_node = assgn_node;
     return false;
 }
 
 DEF_CFG_VISITOR(Binary, Operator, binop) {
     STMT_COUNT(SRCDUMP(binop), binop->getStmtClassName());
     cfg::InternalNode *binop_node = new cfg::InternalNode(m_context, binop);
-    splitEdge(binop_node);
+    m_curr_node->splitEdge(binop_node);
+    m_curr_node = binop_node;
     return false;
 }
 
