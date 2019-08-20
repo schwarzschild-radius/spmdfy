@@ -15,7 +15,7 @@ template <typename Derived, typename RetTy> class CFGVisitor {
   public:
 #define DISPATCH(NAME)                                                         \
     return static_cast<Derived *>(this)->Visit##NAME##Node(                    \
-        static_cast<NAME##Node *>(node))
+        dynamic_cast<NAME##Node *>(node))
 
 #define FALLBACK(NAME)                                                         \
     RetTy Visit##NAME##Node(NAME##Node *node) { DISPATCH(CFG); }

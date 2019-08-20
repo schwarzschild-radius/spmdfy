@@ -304,7 +304,7 @@ CFGNODE_DEF_VISITOR(Internal, internal) {
                             internal->getInternalNodeAs<const clang::VarDecl>())
                      << ";\n";
     } else {
-        internal_gen << internal->getName() << ";\n";
+        internal_gen << internal->getSource() << ";\n";
     }
 
     return internal_gen.str();

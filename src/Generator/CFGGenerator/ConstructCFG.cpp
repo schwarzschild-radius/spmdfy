@@ -42,8 +42,7 @@ DEF_CFG_VISITOR(For, Stmt, for_stmt) {
     m_curr_node = for_node;
 
     // 3. Creating reconv node
-    cfg::ReconvNode *reconv = new cfg::ReconvNode();
-    reconv->setBack(for_node, cfg::CFGEdge::Complete);
+    cfg::ReconvNode *reconv = new cfg::ReconvNode(for_node);
 
     // 4. Setting for's True to point to reconv
     for_node->splitEdge(reconv);
@@ -72,8 +71,7 @@ DEF_CFG_VISITOR(If, Stmt, if_stmt) {
     m_curr_node = if_node;
 
     // 3. Creating reconv node
-    cfg::ReconvNode *reconv = new cfg::ReconvNode();
-    reconv->setBack(if_node, cfg::CFGEdge::Complete);
+    cfg::ReconvNode *reconv = new cfg::ReconvNode(if_node);
 
     // 4. Setting if's True to point to reconv
     if_node->splitEdge(reconv);
