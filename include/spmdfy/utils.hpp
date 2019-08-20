@@ -9,6 +9,10 @@
 // llvm headers
 #include <llvm/Support/Path.h>
 
+// standard header
+#include <type_traits>
+#include <variant>
+
 namespace spmdfy {
 std::string sourceDump(const clang::SourceManager &sm,
                        const clang::LangOptions &lang_opt,
@@ -27,17 +31,19 @@ static bool isExpansionInMainFile(clang::SourceManager &sm, NodeTy *node) {
     return sm.isInMainFile(sm.getExpansionLoc(node->getBeginLoc()));
 }
 
-template<typename Iter>
-std::string strJoin(Iter b, Iter e, char sep=','){
-    std::string temp = *b;
-    while(++b != e){
-        temp += (std::to_string(sep) + " " + *b);
+template <typename Iter>
+std::string strJoin(Iter b, Iter e, std::string sep = ", ") {
+    std::string join = *b;
+    while (++b != e) {
+        join += (sep + *b);
     }
-    return temp;
+    return join;
 }
 
-template <class... Ts> struct visitor : Ts... { using Ts::operator()...; };
-template <class... Ts> visitor(Ts...)->visitor<Ts...>;
+template <typename... T> struct Overload : T... {
+    using T::operator()...;
+    Overload(T &&... ts) : T(std::forward<std::decay_t<T>>(ts))... {}
+};
 
 std::string getFileNameFromSource(std::string filepath);
 std::string getAbsoluteFilePath(const std::string &sFile, std::error_code &EC);
