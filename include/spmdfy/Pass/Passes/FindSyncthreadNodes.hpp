@@ -1,7 +1,7 @@
 #ifndef FIND_SYNCTHREAD_NODES_HPP
 #define FIND_SYNCTHREAD_NODES_HPP
 
-#include <spmdfy/CFG/CFGVisitor.hpp>
+#include <spmdfy/CFG/RecursiveCFGVisitor.hpp>
 #include <clang/AST/Expr.h>
 #include <spmdfy/Pass/PassHandler.hpp>
 
@@ -9,7 +9,7 @@ namespace spmdfy {
 
 namespace pass {
 
-class FindSyncthreadNodes : public cfg::CFGVisitor<FindSyncthreadNodes, bool> {
+class FindSyncthreadNodes : public cfg::RecursiveCFGVisitor<FindSyncthreadNodes> {
   public:
     FindSyncthreadNodes(SpmdTUTy &node, clang::ASTContext &ast_context,
                         Workspace &workspace)
@@ -23,12 +23,7 @@ class FindSyncthreadNodes : public cfg::CFGVisitor<FindSyncthreadNodes, bool> {
 #define CFGNODE_VISITOR(NODE)                                                  \
     auto Visit##NODE##Node(cfg::NODE##Node *)->bool
 
-    CFGNODE_VISITOR(KernelFunc);
-    CFGNODE_VISITOR(IfStmt);
-    CFGNODE_VISITOR(ForStmt);
     CFGNODE_VISITOR(Internal);
-
-    auto handleKernelFunc(cfg::KernelFuncNode *) -> bool;
 
   private:
     // AST specific variables

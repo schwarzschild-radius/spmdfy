@@ -18,12 +18,16 @@ template <typename Derived, typename RetTy> class CFGVisitor {
         dynamic_cast<NAME##Node *>(node))
 
 #define FALLBACK(NAME)                                                         \
-    RetTy Visit##NAME##Node(NAME##Node *node) { DISPATCH(CFG); }
+    virtual RetTy Visit##NAME##Node(NAME##Node *node) { DISPATCH(CFG); }
 
     virtual ~CFGVisitor() = default;
 
+    FALLBACK(Forward);
+    FALLBACK(Backward);
+    FALLBACK(BiDirect);
     FALLBACK(GlobalVar);
     FALLBACK(KernelFunc);
+    FALLBACK(Conditional);
     FALLBACK(IfStmt);
     FALLBACK(ForStmt);
     FALLBACK(Reconv);
@@ -37,8 +41,12 @@ template <typename Derived, typename RetTy> class CFGVisitor {
     RetTy Visit(CFGNode *node) {
         // clang-format off
         switch (node->getNodeType()) {
+        case CFGNode::Forward:       DISPATCH(Forward);
+        case CFGNode::Backward:      DISPATCH(Backward);
+        case CFGNode::BiDirect:      DISPATCH(BiDirect);
         case CFGNode::GlobalVar:     DISPATCH(GlobalVar);
         case CFGNode::KernelFunc:    DISPATCH(KernelFunc);
+        case CFGNode::Conditional:   DISPATCH(Conditional);
         case CFGNode::IfStmt:        DISPATCH(IfStmt);
         case CFGNode::ForStmt:       DISPATCH(ForStmt);
         case CFGNode::Reconv:        DISPATCH(Reconv);
