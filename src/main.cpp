@@ -5,12 +5,14 @@
 // spmdfy headers
 #include <spmdfy/CommandLineOpts.hpp>
 #include <spmdfy/Format.hpp>
-#include <spmdfy/SpmdfyAction.hpp>
 #include <spmdfy/Logger.hpp>
+#include <spmdfy/SpmdfyAction.hpp>
 
 // standard header
 #include <fstream>
 #include <sstream>
+
+extern std::string spmdfy::ispc_macros;
 
 int main(int argc, const char **argv) {
     spmdfy::Logger::initLogger();
@@ -20,8 +22,16 @@ int main(int argc, const char **argv) {
     ClangTool tool(options_parser.getCompilations(),
                    options_parser.getSourcePathList());
     std::vector<std::string> file_sources = options_parser.getSourcePathList();
-    
-    if(file_sources.empty()){
+
+    if (generate_ispc_macros != std::string()) {
+        SPMDFY_INFO("Writing ispc macros to : {}", generate_ispc_macros);
+        std::fstream out_file(generate_ispc_macros, std::ios_base::out);
+        out_file << spmdfy::ispc_macros;
+        out_file.close();
+        return 0;
+    }
+
+    if (file_sources.empty()) {
         llvm::cl::PrintHelpMessage();
         return 1;
     }
@@ -61,7 +71,7 @@ int main(int argc, const char **argv) {
 
     // run SPMDfy action on the source
     spmdfy::SpmdfyFrontendActionFactory action(tu_stream);
-    if (tool.run(&action)){
+    if (tool.run(&action)) {
         SPMDFY_ERROR("error: unable to spmdfy file");
         return 1;
     }
@@ -69,6 +79,11 @@ int main(int argc, const char **argv) {
     if (output_filename != "") {
         SPMDFY_INFO("Writing to : {}", output_filename);
         std::fstream out_file(output_filename, std::ios_base::out);
+        if (!toggle_ispc_macros) {
+            out_file << spmdfy::ispc_macros;
+        } else {
+            out_file << "#include \"ISPCMacros.ispc.h\"" << "\n";
+        }
         out_file << tu_stream.str();
         out_file.close();
         if (spmdfy::format::format(output_filename))
