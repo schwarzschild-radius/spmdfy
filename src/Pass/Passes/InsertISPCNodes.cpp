@@ -11,7 +11,7 @@ bool insertISPCNodes(SpmdTUTy &spmd_tu, clang::ASTContext &ast_context,
                      Workspace &workspace) {
     InsertISPCNode inserter(spmd_tu, ast_context, workspace);
     for (auto node : spmd_tu) {
-        SPMDFY_INFO("Visiting Node {}", node->getNodeTypeName());
+        SPMDFY_INFO("[InsertISPCNode] Visiting Node {}", node->getNodeTypeName());
         if (node->getNodeType() == cfg::CFGNode::KernelFunc) {
             if (inserter.handleKernelFunc(
                     dynamic_cast<cfg::KernelFuncNode *>(node))) {
@@ -42,17 +42,6 @@ auto walkBackTill(cfg::CFGNode *node)
         }
     }
     return {nullptr, cfg::CFGNode::Exit};
-}
-
-auto rmCFGNode(cfg::CFGNode * node) -> cfg::CFGNode *{
-    // 1. get next and previous of current
-    auto next = node->getNext();
-    auto prev = node->getPrevious();
-
-    // 2. Updating then nodes
-    next->setPrevious(prev, cfg::CFGEdge::Complete);
-    prev->setNext(next, cfg::CFGEdge::Complete);
-    return node->getNext();
 }
 
 auto InsertISPCNode::handleKernelFunc(cfg::KernelFuncNode *kernel) -> bool {
@@ -94,7 +83,7 @@ auto InsertISPCNode::handleKernelFunc(cfg::KernelFuncNode *kernel) -> bool {
     default:
         SPMDFY_ERROR("Wrong Back Node");
     }
-    auto curr_node = rmCFGNode(sync_node);
+    auto curr_node = cfg::rmCFGNode(sync_node);
     while (curr_node->getNodeType() != cfg::CFGNode::Exit) {
         curr_node = curr_node->getNext();
     }
