@@ -18,7 +18,6 @@
 #include <variant>
 
 namespace spmdfy {
-extern std::string ispc_macros;
 namespace codegen {
 
 class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,

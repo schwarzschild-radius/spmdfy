@@ -12,7 +12,6 @@ auto CFGCodeGen::getFrom(cfg::CFGNode *) -> std::string const { return ""; }
 
 auto CFGCodeGen::traverseCFG() -> std::string const {
     OStreamTy tu_gen;
-    tu_gen << ispc_macros;
     for (auto node : m_node) {
         tu_gen << Visit(node);
     }

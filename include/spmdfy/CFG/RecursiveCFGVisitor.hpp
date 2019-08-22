@@ -54,6 +54,16 @@ class RecursiveCFGVisitor
         }
         return true;
     }
+
+    bool VisitForStmtNode(ForStmtNode *node) {
+        SPMDFY_INFO("Recursively Visiting ForStmt");
+        for (auto curr_node = node->getNext();
+             !(ISNODE(curr_node, CFGNode::Reconv));
+             curr_node = curr_node->getNext()) {
+            VISIT(curr_node);
+        }
+        return true;
+    }
 };
 } // namespace cfg
 

@@ -16,6 +16,10 @@ bool detectPartialNodes(SpmdTUTy &spmd_tu, clang::ASTContext &ast_context,
     return false;
 }
 
+CFGNODE_DEF_VISITOR(ForStmt, for_stmt){
+    return false;
+}
+
 CFGNODE_DEF_VISITOR(KernelFunc, kernel) {
     auto kernel_name = kernel->getName();
     SPMDFY_INFO("Detecting Partial Node of {} : ", kernel_name);

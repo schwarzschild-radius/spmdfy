@@ -23,6 +23,7 @@ class DetectPartialNodes
 #define CFGNODE_VISITOR(NODE) auto Visit##NODE##Node(cfg::NODE##Node *)->bool
 
     CFGNODE_VISITOR(KernelFunc);
+    CFGNODE_VISITOR(ForStmt);
 
   private:
     // AST specific variables
