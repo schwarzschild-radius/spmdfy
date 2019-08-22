@@ -23,8 +23,7 @@ DEF_CFG_VISITOR(Decl, Stmt, decl_stmt) {
         STMT_COUNT(SRCDUMP(decl), decl_stmt->getStmtClassName());
         cfg::InternalNode *decl_node = new cfg::InternalNode(
             m_context, llvm::cast<const clang::VarDecl>(decl));
-        splitEdge(decl_node);
-        break;
+        m_curr_node = m_curr_node->splitEdge(decl_node);
     }
     return false;
 }
@@ -160,7 +159,8 @@ auto ConstructSpmdCFG::add(const clang::FunctionDecl *func_decl) -> bool {
     auto func = new cfg::KernelFuncNode(m_context, func_decl);
     m_curr_node = func;
     auto func_exit = new cfg::ExitNode();
-    func->setNext(func_exit, cfg::CFGEdge::Complete);
+    func->setNext(func_exit);
+    func->setExit(func_exit);
     STMT_COUNT("Entry", "EntryNode");
     TraverseStmt(func_decl->getBody());
     STMT_COUNT("Exit", "ExitNode");
