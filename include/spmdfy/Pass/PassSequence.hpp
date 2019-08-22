@@ -9,6 +9,8 @@ SEQUENCE_T(
            locate_ast_nodes_pass_t,
            insert_ispc_nodes_pass_t,
            hoist_shmem_nodes_pass_t,
+           detect_partial_nodes_pass_t,
+           duplicate_partial_nodes_pass_t,
            print_reverse_cfg_pass_t,
            print_cfg_pass_t
 )

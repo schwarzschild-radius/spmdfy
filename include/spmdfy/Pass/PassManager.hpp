@@ -10,8 +10,10 @@
 
 // clang-format off
 #include <spmdfy/Pass/Passes/LocateASTNodes.hpp>
-#include <spmdfy/Pass/Passes/HoistShmemNodes.hpp>
 #include <spmdfy/Pass/Passes/InsertISPCNodes.hpp>
+#include <spmdfy/Pass/Passes/HoistShmemNodes.hpp>
+#include <spmdfy/Pass/Passes/DuplicatePartialNodes.hpp>
+#include <spmdfy/Pass/Passes/DetectPartialNodes.hpp>
 #include <spmdfy/Pass/Passes/PrintReverseCFGPass.hpp>
 #include <spmdfy/Pass/Passes/PrintCFGPass.hpp>
 // clang-format on

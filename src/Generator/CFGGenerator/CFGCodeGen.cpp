@@ -129,6 +129,7 @@ DECL_DEF_VISITOR(Var, var_decl) {
     std::string var_name = var_decl->getNameAsString();
     clang::QualType type = var_decl->getType();
     std::string var_base_type = VisitQualType(type);
+    SPMDFY_ERROR("Base type not visible: {}", var_base_type);
 
     if (type->isIncompleteType() &&
         var_decl->hasAttr<clang::CUDASharedAttr>()) {

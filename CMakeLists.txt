@@ -28,8 +28,10 @@ add_executable(spmdfy src/main.cpp
                       src/Pass/PassManager.cpp
                       # Passes in the Sequence
                       src/Pass/Passes/LocateASTNodes.cpp
-                      src/Pass/Passes/HoistShmemNodes.cpp
                       src/Pass/Passes/InsertISPCNodes.cpp
+                      src/Pass/Passes/HoistShmemNodes.cpp
+                      src/Pass/Passes/DetectPartialNodes.cpp
+                      src/Pass/Passes/DuplicatePartialNodes.cpp
                       src/Pass/Passes/PrintReverseCFGPass.cpp
                       src/Pass/Passes/PrintCFGPass.cpp
 )

@@ -13,13 +13,6 @@ namespace spmdfy {
 
 extern std::string ispc_macros;
 
-class ISPCKernelGenerator
-    : public clang::DeclVisitor<ISPCKernelGenerator, std::string>,
-      public clang::StmtVisitor<ISPCKernelGenerator, std::string> {
-  public:
-  private:
-};
-
 class SimpleGenerator
     : public ISPCGenerator,
       public clang::ConstDeclVisitor<SimpleGenerator, std::string>,

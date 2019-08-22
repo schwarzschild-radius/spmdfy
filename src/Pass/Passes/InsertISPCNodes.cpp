@@ -10,7 +10,7 @@ namespace pass {
 bool insertISPCNodes(SpmdTUTy &spmd_tu, clang::ASTContext &ast_context,
                      Workspace &workspace) {
     InsertISPCNodes inserter(spmd_tu, ast_context, workspace);
-    return inserter.HandleSpmdTU(spmd_tu);
+    return !inserter.HandleSpmdTU(spmd_tu);
 }
 
 auto walkBackTill(cfg::CFGNode *node,
