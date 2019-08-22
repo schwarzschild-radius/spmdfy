@@ -104,7 +104,10 @@ DEF_CFG_VISITOR(Call, Expr, call) {
     return false;
 }
 
-DEF_CFG_VISITOR(PseudoObject, Expr, pseudo) { return false; }
+DEF_CFG_VISITOR(PseudoObject, Expr, pseudo) { 
+    SPMDFY_ERROR("PseudoObjectExpr: {}", SRCDUMP(pseudo));
+    return false; 
+}
 
 DEF_CFG_VISITOR(CompoundAssign, Operator, assgn) {
     STMT_COUNT(SRCDUMP(assgn), assgn->getStmtClassName());

@@ -12,7 +12,7 @@ auto CFGCodeGen::getFrom(cfg::CFGNode *) -> std::string const { return ""; }
 
 auto CFGCodeGen::traverseCFG() -> std::string const {
     OStreamTy tu_gen;
-    // tu_gen << ispc_macros;
+    tu_gen << ispc_macros;
     for (auto node : m_node) {
         tu_gen << Visit(node);
     }
@@ -52,11 +52,11 @@ std::string CFGCodeGen::getISPCBaseType(std::string from) {
 auto CFGCodeGen::VisitQualType(clang::QualType qual) -> std::string {
     SPMDFY_INFO("Visiting QualType: {}", qual.getAsString());
     OStreamTy qual_gen;
-
+    qual = qual.getDesugaredType(m_ast_context);
     if (qual.hasQualifiers()) {
         SPMDFY_INFO("Has Qualifier: {}", qual.getQualifiers().getAsString());
         qual_gen << qual.getQualifiers().getAsString() << " ";
-        qual = qual.getUnqualifiedType().getDesugaredType(m_ast_context);
+        qual = qual.getUnqualifiedType();
     }
 
     qual_gen << Visit(qual.getTypePtr());
@@ -129,7 +129,11 @@ DECL_DEF_VISITOR(Var, var_decl) {
     std::string var_name = var_decl->getNameAsString();
     clang::QualType type = var_decl->getType();
     std::string var_base_type = VisitQualType(type);
-    SPMDFY_ERROR("Base type not visible: {}", var_base_type);
+    if (var_base_type == "") {
+        SPMDFY_ERROR("Base type not visible: {}, {}", var_base_type,
+                     type.getAsString());
+        type.dump();
+    }
 
     if (type->isIncompleteType() &&
         var_decl->hasAttr<clang::CUDASharedAttr>()) {
@@ -296,18 +300,51 @@ CFGNODE_DEF_VISITOR(ForStmt, forstmt) {
     return for_gen.str();
 }
 
+DEF_VISITOR(Call, Expr, call_expr) {
+    SPMDFY_INFO("Visiting CallExpr: {}", SRCDUMP(call_expr));
+    std::ostringstream call_gen;
+    const clang::FunctionDecl *callee = call_expr->getDirectCallee();
+    std::string callee_name = callee->getNameAsString();
+    if (callee_name == "printf") {
+        return std::string();
+    }
+    if (auto is_atomic = g_SpmdfyAtomicMap.find(callee_name);
+        is_atomic != g_SpmdfyAtomicMap.end()) {
+        const auto args = call_expr->getArgs();
+        call_gen << is_atomic->second << "(";
+        if (is_atomic->first != "atomicCAS") {
+            call_gen << SRCDUMP(args[0]) << ", " << SRCDUMP(args[1]);
+        } else {
+            call_gen << SRCDUMP(args[0]) << ", " << SRCDUMP(args[1]) << ", "
+                     << SRCDUMP(args[2]);
+        }
+        call_gen << ")";
+        return call_gen.str();
+    }
+    call_gen << SRCDUMP(call_expr);
+    return call_gen.str();
+}
+
+// :CallExpr
+
+// :AST Visitors
+
 CFGNODE_DEF_VISITOR(Internal, internal) {
     SPMDFY_INFO("CodeGen InternalNode {}", internal->getName());
     OStreamTy internal_gen;
     const std::string &node_name = internal->getInternalNodeName();
-    if (node_name == "Var") {
-        internal_gen << Visit(
-                            internal->getInternalNodeAs<const clang::VarDecl>())
-                     << ";\n";
+    if (auto src = std::visit(
+            Overload([&](const clang::Decl *decl) { return Visit(decl); },
+                     [&](const clang::Stmt *stmt) { return Visit(stmt); },
+                     [&](const clang::Expr *expr) { return Visit(expr); },
+                     [&](const clang::Type *type) { return Visit(type); }),
+            internal->getInternalNode());
+        src != "") {
+        internal_gen << src;
     } else {
-        internal_gen << internal->getSource() << ";\n";
+        internal_gen << internal->getSource();
     }
-
+    internal_gen << ";\n";
     return internal_gen.str();
 }
 

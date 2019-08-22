@@ -31,9 +31,9 @@ auto DuplicatePartialNodes::duplicateInternalNode(cfg::InternalNode * node) -> c
 
 CFGNODE_DEF_VISITOR(ISPCBlock, block) {
     auto kernel = getKernelNodeName(block);
-    auto hook = block;
+    cfg::CFGNode* hook = block;
     for(auto var : m_workspace.partial_nodes[kernel]){
-        hook->splitEdge(duplicateInternalNode(var));
+        hook = hook->splitEdge(duplicateInternalNode(var));
     }
     return true;
 }

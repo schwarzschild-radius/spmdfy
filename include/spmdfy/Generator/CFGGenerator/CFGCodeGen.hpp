@@ -15,6 +15,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <variant>
 
 namespace spmdfy {
 extern std::string ispc_macros;
@@ -61,6 +62,8 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
     DECL_VISITOR(Var);
     DECL_VISITOR(ParmVar);
     DECL_VISITOR(Function);
+
+    EXPR_VISITOR(Call);
 
     auto VisitQualType(clang::QualType qual) -> std::string;
     TYPE_VISITOR(Builtin);

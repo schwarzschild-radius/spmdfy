@@ -28,6 +28,7 @@ CFGNODE_DEF_VISITOR(KernelFunc, kernel) {
             if (internal->getInternalNodeName() == "Var") {
                 auto var_decl = internal->getInternalNodeAs<const clang::VarDecl>();
                 if(!var_decl->hasAttr<clang::CUDASharedAttr>()){
+                    cfg::rmCFGNode(internal);
                     v.push_back(internal);
                 }
             }
