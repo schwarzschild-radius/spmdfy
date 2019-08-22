@@ -6,8 +6,10 @@ namespace pass {
 
 // clang-format off
 SEQUENCE_T(
-           find_syncthreads_nodes_pass_t,
+           locate_ast_nodes_pass_t,
            insert_ispc_nodes_pass_t,
+           hoist_shmem_nodes_pass_t,
+           print_reverse_cfg_pass_t,
            print_cfg_pass_t
 )
 // clang-format on

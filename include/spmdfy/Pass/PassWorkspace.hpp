@@ -18,6 +18,7 @@ namespace pass {
 // clang-format off
 WORKSPACES(
     WORKSPACE(syncthrds_queue, std::queue<cfg::InternalNode *>)
+    WORKSPACE(shmem_queue, std::queue<cfg::InternalNode *>)
 )
 // clang-format on
 

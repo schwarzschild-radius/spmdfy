@@ -8,9 +8,13 @@
 #include <spmdfy/CFG/CFG.hpp>
 #include <spmdfy/utils.hpp>
 
-#include <spmdfy/Pass/Passes/PrintCFGPass.hpp>
+// clang-format off
+#include <spmdfy/Pass/Passes/LocateASTNodes.hpp>
+#include <spmdfy/Pass/Passes/HoistShmemNodes.hpp>
 #include <spmdfy/Pass/Passes/InsertISPCNodes.hpp>
-#include <spmdfy/Pass/Passes/FindSyncthreadNodes.hpp>
+#include <spmdfy/Pass/Passes/PrintReverseCFGPass.hpp>
+#include <spmdfy/Pass/Passes/PrintCFGPass.hpp>
+// clang-format on
 
 #include <spmdfy/Pass/PassSequence.hpp>
 #include <spmdfy/Pass/PassWorkspace.hpp>
