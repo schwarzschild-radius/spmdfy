@@ -157,12 +157,17 @@ def test_nvcc_parser():
 
 if __name__ == "__main__":
     import argparse as argp
+    cmd_parser = argp.ArgumentParser()
+    cmd_parser.add_argument("compilation_database", help = "CUDA compilation database")
+    cmd_parser.add_argument("-o", default = "./compile_commands.json", help = "filename of the new compilation database")
+    cmd_args = cmd_parser.parse_args()
+    compilation_database = cmd_args.compilation_database
     new_compile_commands = {}
-    with open("/home/pradeep/Experiments/Allen_SPMD/build/compile_commands.json") as compile_commands:
+    with open(compilation_database) as compile_commands:
         parser = nvcc_argument_parser()
         new_compile_commands = modify_compile_commands(
             parser, compile_commands.read())
 
-    with open("./compile_commands.json", "w") as compile_commands:
+    with open(cmd_args.o, "w") as compile_commands:
         import json
         compile_commands.write(json.dumps(new_compile_commands))
