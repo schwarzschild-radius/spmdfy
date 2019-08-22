@@ -21,6 +21,7 @@ using InternalNodeTy = std::variant<const clang::Decl *, const clang::Stmt *,
 
 class CFGNode;
 class BiDirectNode;
+class ExitNode;
 
 class CFGEdge {
   public:
@@ -103,14 +104,7 @@ class CFGNode {
 class GlobalVarNode : public CFGNode {
   public:
     GlobalVarNode(clang::ASTContext &ast_context,
-                  const clang::VarDecl *var_decl)
-        : m_ast_context(ast_context) {
-        m_var_decl = var_decl;
-        m_name = var_decl->getNameAsString();
-        m_node_type = GlobalVar;
-        m_context = Global;
-        SPMDFY_INFO("Creating GlobalVarNode {}", m_name);
-    }
+                  const clang::VarDecl *var_decl);
 
     auto getName() -> std::string const override {
         return m_var_decl->getNameAsString();
@@ -132,11 +126,7 @@ class GlobalVarNode : public CFGNode {
 class ForwardNode : public virtual CFGNode {
   public:
     virtual ~ForwardNode() { delete m_next; }
-    ForwardNode() {
-        m_node_type = Forward;
-        m_name = getNodeTypeName();
-        m_next = new CFGEdge();
-    }
+    ForwardNode();
 
     // override
     auto getNext() -> CFGNode *const override;
@@ -152,12 +142,8 @@ class ForwardNode : public virtual CFGNode {
 
 class BackwardNode : public virtual CFGNode {
   public:
-    virtual ~BackwardNode() { delete m_prev; }
-    BackwardNode() {
-        m_node_type = Backward;
-        m_name = getNodeTypeName();
-        m_prev = new CFGEdge();
-    }
+    virtual ~BackwardNode() = default;
+    BackwardNode();
 
     virtual auto getPrevious() -> CFGNode *const;
     virtual auto setPrevious(CFGNode *node,
@@ -185,20 +171,18 @@ class BiDirectNode : public ForwardNode, public BackwardNode {
 class KernelFuncNode : public ForwardNode {
   public:
     KernelFuncNode(clang::ASTContext &ast_context,
-                   const clang::FunctionDecl *func_decl)
-        : m_ast_context(ast_context) {
-        SPMDFY_INFO("Creating KerneFuncNode {}", func_decl->getNameAsString());
-        m_func_decl = func_decl;
-        m_node_type = KernelFunc;
-        m_name = getNodeTypeName();
-        m_context = Global;
-    }
+                   const clang::FunctionDecl *func_decl);
 
     auto getName() -> std::string const override;
     auto getKernelNode() -> const clang::FunctionDecl *const;
 
+    auto getExit() -> ExitNode *const;
+    auto setExit(ExitNode *, CFGEdge::Edge edge_type = CFGEdge::Complete)
+        -> ExitNode *;
+
   private:
     const clang::FunctionDecl *m_func_decl;
+    CFGEdge *m_exit;
 
     // AST context
     clang::ASTContext &m_ast_context;
@@ -209,14 +193,7 @@ class KernelFuncNode : public ForwardNode {
 class ConditionalNode : public BiDirectNode {
   public:
     virtual ~ConditionalNode() { delete reconv; }
-    ConditionalNode(clang::ASTContext &ast_context, const clang::Stmt *stmt)
-        : m_ast_context(ast_context) {
-        m_node_type = Conditional;
-        m_name = getNodeTypeName();
-        true_b = m_next;
-        reconv = new CFGEdge();
-        m_cond_stmt = stmt;
-    }
+    ConditionalNode(clang::ASTContext &ast_context, const clang::Stmt *stmt);
 
     auto getReconv() -> CFGNode *const;
     auto setReconv(CFGNode *node, CFGEdge::Edge edge_type = CFGEdge::Complete)
@@ -233,19 +210,7 @@ class ConditionalNode : public BiDirectNode {
 class IfStmtNode : public ConditionalNode {
   public:
     ~IfStmtNode() { delete false_b; }
-    IfStmtNode(clang::ASTContext &ast_context, const clang::IfStmt *if_stmt)
-        : ConditionalNode(ast_context, if_stmt) {
-        m_node_type = IfStmt;
-        m_name = getNodeTypeName();
-        false_b = new CFGEdge();
-        m_source = "if (" +
-                   sourceDump(ast_context.getSourceManager(),
-                              ast_context.getLangOpts(),
-                              if_stmt->getCond()->getSourceRange().getBegin(),
-                              if_stmt->getCond()->getSourceRange().getEnd()) +
-                   ")";
-    }
-
+    IfStmtNode(clang::ASTContext &ast_context, const clang::IfStmt *if_stmt);
     // getters
     auto getIfStmt() -> const clang::IfStmt *const {
         return llvm::cast<const clang::IfStmt>(m_cond_stmt);
@@ -267,14 +232,7 @@ class IfStmtNode : public ConditionalNode {
 class ForStmtNode : public ConditionalNode {
   public:
     ~ForStmtNode() = default;
-    ForStmtNode(clang::ASTContext &ast_context, const clang::ForStmt *for_stmt)
-        : ConditionalNode(ast_context, for_stmt) {
-        m_node_type = ForStmt;
-        m_source = sourceDump(ast_context.getSourceManager(),
-                              ast_context.getLangOpts(),
-                              for_stmt->getSourceRange().getBegin(),
-                              for_stmt->getBody()->getSourceRange().getBegin());
-    }
+    ForStmtNode(clang::ASTContext &ast_context, const clang::ForStmt *for_stmt);
     // getters
     auto getForStmt() -> const clang::ForStmt *const {
         return llvm::cast<const clang::ForStmt>(m_cond_stmt);
@@ -286,14 +244,7 @@ class ForStmtNode : public ConditionalNode {
 class ReconvNode : public BiDirectNode {
   public:
     ~ReconvNode() = default;
-    ReconvNode(ConditionalNode *cond_node) {
-        m_node_type = Reconv;
-        m_name = "ReconvNode";
-        m_source = std::string();
-        m_context = Kernel;
-        back = m_prev;
-        back->setTerminal(cond_node);
-    }
+    ReconvNode(ConditionalNode *cond_node);
 
     // getters
     auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type)
@@ -311,12 +262,7 @@ class ReconvNode : public BiDirectNode {
 class InternalNode : public BiDirectNode {
   public:
     ~InternalNode() = default;
-    InternalNode(clang::ASTContext &ast_context, InternalNodeTy node)
-        : m_node(node), m_ast_context(ast_context) {
-        SPMDFY_INFO("Creating InternalNode {}", getInternalNodeName());
-        m_node_type = Internal;
-        m_name = getInternalNodeName();
-    }
+    InternalNode(clang::ASTContext &ast_context, InternalNodeTy node);
 
     // override
     auto getSource() -> std::string const override;
@@ -355,12 +301,7 @@ class InternalNode : public BiDirectNode {
 class ExitNode : public BackwardNode {
   public:
     ~ExitNode() = default;
-    ExitNode() {
-        SPMDFY_INFO("Creating ExitNode");
-        m_node_type = Exit;
-        m_name = "ExitNode";
-        m_source = std::string();
-    }
+    ExitNode();
 };
 
 // :ExitNode
@@ -368,11 +309,7 @@ class ExitNode : public BackwardNode {
 class ISPCBlockNode : public BiDirectNode {
   public:
     ~ISPCBlockNode() = default;
-    ISPCBlockNode() {
-        SPMDFY_INFO("Creating ISPCBlockNode");
-        m_node_type = ISPCBlock;
-    }
-
+    ISPCBlockNode();
   private:
 };
 
@@ -381,11 +318,7 @@ class ISPCBlockNode : public BiDirectNode {
 class ISPCBlockExitNode : public BiDirectNode {
   public:
     ~ISPCBlockExitNode() = default;
-    ISPCBlockExitNode() {
-        SPMDFY_INFO("Creating ISPCBlockExitNode");
-        m_node_type = ISPCBlockExit;
-        m_source = "ISPC_BLOCK_END";
-    }
+    ISPCBlockExitNode();
 };
 
 // :ISPCBlockExitNode
@@ -393,11 +326,7 @@ class ISPCBlockExitNode : public BiDirectNode {
 class ISPCGridNode : public BiDirectNode {
   public:
     ~ISPCGridNode() = default;
-    ISPCGridNode() {
-        SPMDFY_INFO("Creating ISPCGridNode");
-        m_node_type = ISPCGrid;
-        m_source = "ISPC_GRID_START";
-    }
+    ISPCGridNode();
 };
 
 // :ISPCGridNode
@@ -405,14 +334,14 @@ class ISPCGridNode : public BiDirectNode {
 class ISPCGridExitNode : public BiDirectNode {
   public:
     ~ISPCGridExitNode() = default;
-    ISPCGridExitNode() {
-        SPMDFY_INFO("Creating ISPCGridExitNode");
-        m_node_type = ISPCGridExit;
-        m_source = "ISPC_GRID_END";
-    }
+    ISPCGridExitNode();
 };
 
 // :ISPCGridExitNode
+
+auto rmCFGNode(CFGNode *node) -> cfg::CFGNode *;
+
+// :utils
 
 } // namespace cfg
 
