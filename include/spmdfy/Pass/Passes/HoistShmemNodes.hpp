@@ -1,5 +1,5 @@
-#ifndef FIND_SYNCTHREAD_NODES_HPP
-#define FIND_SYNCTHREAD_NODES_HPP
+#ifndef HOIST_SHMEM_NODES_HPP
+#define HOIST_SHMEM_NODES_HPP
 
 #include <spmdfy/CFG/RecursiveCFGVisitor.hpp>
 #include <clang/AST/Expr.h>

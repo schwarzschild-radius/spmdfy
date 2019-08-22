@@ -8,19 +8,10 @@ namespace spmdfy {
 
 namespace pass {
 
-#define WORKSPACE(VAR, TYPE) TYPE VAR;
-
-#define WORKSPACES(...)                                                        \
-    struct Workspace {                                                         \
-        __VA_ARGS__                                                            \
-    };
-
-// clang-format off
-WORKSPACES(
-    WORKSPACE(syncthrds_queue, std::queue<cfg::InternalNode *>)
-    WORKSPACE(shmem_queue, std::queue<cfg::InternalNode *>)
-)
-// clang-format on
+struct Workspace{
+    std::map<std::string, std::queue<cfg::InternalNode *>> syncthreads_queue;
+    std::map<std::string, std::queue<cfg::InternalNode *>> shmem_queue;
+};
 
 } // namespace pass
 

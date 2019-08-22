@@ -15,8 +15,9 @@ bool hoistShmemNodes(SpmdTUTy &spmd_tu, clang::ASTContext &ast_context,
     for (auto node : spmd_tu) {
         SPMDFY_INFO("[HoistShmemNodes] Visiting Node {}", node->getNodeTypeName());
         if (node->getNodeType() == cfg::CFGNode::KernelFunc) {
-            auto grid_node = node; //getISPCGridNode(CASTAS(cfg::KernelFuncNode*, node));
-            auto& queue = workspace.shmem_queue;
+            auto kernel_name = node->getName();
+            auto grid_node = node->getNext(); //getISPCGridNode(CASTAS(cfg::KernelFuncNode*, node));
+            auto& queue = workspace.shmem_queue[kernel_name];
             while(queue.size()){
                 auto shmem_node = queue.front();
                 cfg::rmCFGNode(shmem_node);

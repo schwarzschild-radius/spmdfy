@@ -9,21 +9,12 @@ namespace pass {
 
 bool insertISPCNodes(SpmdTUTy &spmd_tu, clang::ASTContext &ast_context,
                      Workspace &workspace) {
-    InsertISPCNode inserter(spmd_tu, ast_context, workspace);
-    for (auto node : spmd_tu) {
-        SPMDFY_INFO("[InsertISPCNode] Visiting Node {}", node->getNodeTypeName());
-        if (node->getNodeType() == cfg::CFGNode::KernelFunc) {
-            if (inserter.handleKernelFunc(
-                    dynamic_cast<cfg::KernelFuncNode *>(node))) {
-                SPMDFY_ERROR("Something is wrong");
-                return true;
-            }
-        }
-    }
-    return false;
+    InsertISPCNodes inserter(spmd_tu, ast_context, workspace);
+    return inserter.HandleSpmdTU(spmd_tu);
 }
 
-auto walkBackTill(cfg::CFGNode *node)
+auto walkBackTill(cfg::CFGNode *node,
+                  cfg::CFGNode::Node node_type = cfg::CFGNode::KernelFunc)
     -> std::tuple<cfg::CFGNode *, cfg::CFGNode::Node> {
     auto curr_node = node->getPrevious();
     while (true) {
@@ -44,7 +35,7 @@ auto walkBackTill(cfg::CFGNode *node)
     return {nullptr, cfg::CFGNode::Exit};
 }
 
-auto InsertISPCNode::handleKernelFunc(cfg::KernelFuncNode *kernel) -> bool {
+auto InsertISPCNodes::VisitKernelFuncNode(cfg::KernelFuncNode *kernel) -> bool {
     // 1. Inserting GridNode
     auto grid_start = new cfg::ISPCGridNode();
     kernel->splitEdge(grid_start);
@@ -54,7 +45,13 @@ auto InsertISPCNode::handleKernelFunc(cfg::KernelFuncNode *kernel) -> bool {
     grid_start->splitEdge(block_start);
 
     // 3. Getting sync_node
-    auto sync_node = m_workspace.syncthrds_queue.front();
+    if (m_workspace.syncthreads_queue[kernel->getName()].empty()) {
+        auto last_node = kernel->getExit()->getPrevious();
+        last_node->splitEdge(new cfg::ISPCBlockExitNode())
+            ->splitEdge(new cfg::ISPCGridExitNode());
+        return false;
+    }
+    auto sync_node = m_workspace.syncthreads_queue[kernel->getName()].front();
 
     // 4. Getting back node
     auto [back_node, back_node_type] = walkBackTill(sync_node);
