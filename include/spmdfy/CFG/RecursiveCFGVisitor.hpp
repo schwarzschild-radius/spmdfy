@@ -16,10 +16,10 @@ template <typename Derived>
 class RecursiveCFGVisitor
     : public CFGVisitor<RecursiveCFGVisitor<Derived>, bool> {
 #define ISNODE(NODE, TYPE) (NODE->getNodeType() == TYPE)
-    using CFGVisitor<RecursiveCFGVisitor<Derived>, bool>::Visit;
 
 #define VISIT(NODE) static_cast<Derived *>(this)->Visit(NODE)
   public:
+    using CFGVisitor<RecursiveCFGVisitor<Derived>, bool>::Visit;
     bool HandleSpmdTU(SpmdTUTy &tu) {
         for (auto node : tu) {
             Visit(node);

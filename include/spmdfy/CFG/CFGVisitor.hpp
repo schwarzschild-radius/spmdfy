@@ -10,7 +10,7 @@ namespace spmdfy {
 namespace cfg {
 
 using SpmdTUTy = std::vector<cfg::CFGNode *>;
-
+// FIXME: Why CRTP and Virtual???
 template <typename Derived, typename RetTy> class CFGVisitor {
   public:
 #define DISPATCH(NAME)                                                         \
@@ -38,7 +38,7 @@ template <typename Derived, typename RetTy> class CFGVisitor {
     FALLBACK(ISPCGrid);
     FALLBACK(ISPCGridExit);
 
-    RetTy Visit(CFGNode *node) {
+    virtual RetTy Visit(CFGNode *node) {
         // clang-format off
         switch (node->getNodeType()) {
         case CFGNode::Forward:       DISPATCH(Forward);
@@ -63,7 +63,7 @@ template <typename Derived, typename RetTy> class CFGVisitor {
         return RetTy();
     }
 
-    RetTy VisitCFGNode(CFGNode *node) { return RetTy(); }
+    virtual RetTy VisitCFGNode(CFGNode *node) { return RetTy(); }
 };
 
 } // namespace cfg
