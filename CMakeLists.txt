@@ -18,6 +18,7 @@ add_executable(spmdfy src/main.cpp
                       src/CUDA2ISPC.cpp
                       src/CommandLineOpts.cpp
                       src/Logger.cpp
+                      # Generators
                       src/Generator/SimpleGenerator.cpp
                       src/Generator/CFGGenerator/CFGGenerator.cpp
                       src/Generator/CFGGenerator/ConstructCFG.cpp
@@ -25,9 +26,12 @@ add_executable(spmdfy src/main.cpp
                       src/Generator/ISPCMacros.cpp
                       src/CFG/CFG.cpp
                       src/Pass/PassManager.cpp
-                      src/Pass/Passes/PrintCFGPass.cpp
+                      # Passes in the Sequence
+                      src/Pass/Passes/LocateASTNodes.cpp
+                      src/Pass/Passes/HoistShmemNodes.cpp
                       src/Pass/Passes/InsertISPCNodes.cpp
-                      src/Pass/Passes/FindSyncthreadNodes.cpp
+                      src/Pass/Passes/PrintReverseCFGPass.cpp
+                      src/Pass/Passes/PrintCFGPass.cpp
 )
 
 target_include_directories(spmdfy PRIVATE include
