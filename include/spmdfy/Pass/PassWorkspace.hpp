@@ -7,8 +7,15 @@
 namespace spmdfy {
 
 namespace pass {
-
-struct Workspace{
+/**
+ * \class Worksace
+ * \ingroup Pass
+ *
+ * \brief A global workspace structure which acts as a scratch space for passes
+ * and for sharing data
+ *
+ * */
+struct Workspace {
     std::map<std::string, std::queue<cfg::InternalNode *>> syncthreads_queue;
     std::map<std::string, std::queue<cfg::InternalNode *>> shmem_queue;
     std::map<std::string, std::vector<cfg::InternalNode *>> partial_nodes;

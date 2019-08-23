@@ -12,6 +12,15 @@ namespace cfg {
 
 using SpmdTUTy = std::vector<CFGNode *>;
 
+/**
+ * \class RecursiveCFGVistior
+ * \ingroup CFG
+ *
+ * \brief A Recursive Vistior interface to the CFG inspired by the
+ * RecursiveASTVisitor. Here the recursive visitor takes care of traversal
+ * throught control flow nodes
+ *
+ * */
 template <typename Derived>
 class RecursiveCFGVisitor
     : public CFGVisitor<RecursiveCFGVisitor<Derived>, bool> {

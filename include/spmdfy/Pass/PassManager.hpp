@@ -27,6 +27,15 @@ namespace spmdfy {
 
 namespace pass {
 
+/**
+ * \class PassManager
+ * \ingroup Pass
+ *
+ * \brief The class that drives the pass sequence on the CFG in the given order
+ * in sequence
+ *
+ * */
+
 class PassManager {
   public:
     using SpmdTUTy = std::vector<cfg::CFGNode *>;
@@ -40,8 +49,10 @@ class PassManager {
         initPassSequence();
     }
 
+    /// sets the arguments for the sequence
     auto initPassSequence() -> void;
 
+    /// run the sequence on the CFG
     auto runPassSequence() -> bool;
 
   private:

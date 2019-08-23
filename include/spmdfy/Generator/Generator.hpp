@@ -3,16 +3,27 @@
 
 #include <clang/AST/Decl.h>
 
-namespace spmdfy{
+namespace spmdfy {
+/**
+ * \class ISPCGenerator
+ * \ingroup CodeGen
+ *
+ * \brief An Interface class to the generator which the frontend invokes by
+ * passing the AST Context
+ *
+ * */
+class ISPCGenerator {
+  public:
+    virtual ~ISPCGenerator() = default;
+    // every generator must override this to handle translation unit...
 
-class ISPCGenerator{
-    public:
-        virtual ~ISPCGenerator() = default;
-        // every generator must override this to handle translation unit...
-        virtual auto handleTranslationUnit(clang::ASTContext&) -> bool = 0; // !OVERRIDE THIS
-    private:
+    /// handles the the CUDA Translation Unit
+    /// @params AST context of the Translation Unit
+    virtual auto handleTranslationUnit(clang::ASTContext &)
+        -> bool = 0; // !OVERRIDE THIS
+  private:
 };
 
-}
+} // namespace spmdfy
 
 #endif

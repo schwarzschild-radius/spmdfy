@@ -14,13 +14,20 @@
 
 #include <sstream>
 #include <string>
-#include <vector>
 #include <variant>
+#include <vector>
 
 namespace spmdfy {
 extern std::string ispc_macros;
 namespace codegen {
-
+/**
+ * \class CFGCodeGen
+ * \ingroup CodeGen
+ *
+ * \brief Generates Codegen by recursively visiting CFG and also AST to generate
+ * code
+ *
+ * */
 class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
                    public clang::ConstStmtVisitor<CFGCodeGen, std::string>,
                    public clang::TypeVisitor<CFGCodeGen, std::string>,
@@ -32,7 +39,7 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
 
   public:
     using OStreamTy = std::ostringstream;
-    
+
     CFGCodeGen(clang::ASTContext &ast_context,
                const std::vector<cfg::CFGNode *> &node)
         : m_ast_context(ast_context), m_sm(ast_context.getSourceManager()),
@@ -40,8 +47,14 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
         m_lang_opts.CPlusPlus = true;
         m_lang_opts.Bool = true;
     }
+    /// returns generated ISPC code
     auto get() -> std::string const;
+
+    /// returns generated ISPC code from CFGNode
+    /// @params CFGNode*
     auto getFrom(cfg::CFGNode *) -> std::string const;
+
+    /// traverses the CFG
     auto traverseCFG() -> std::string const;
 
     // ispc code generators
@@ -56,7 +69,7 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
     auto Visit##NODE##Expr(const clang::NODE##Expr *)->std::string
 #define TYPE_VISITOR(NODE)                                                     \
     auto Visit##NODE##Type(const clang::NODE##Type *)->std::string
-#define CFGNODE_VISITOR(NODE)                                                     \
+#define CFGNODE_VISITOR(NODE)                                                  \
     auto Visit##NODE##Node(cfg::NODE##Node *)->std::string
 
     DECL_VISITOR(Var);
@@ -88,7 +101,7 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
 
     cfg::CFGNode::Context m_tu_context;
 
-    const cfg::SpmdTUTy& m_node;
+    const cfg::SpmdTUTy &m_node;
 };
 
 #undef CFGNODE_VISITOR

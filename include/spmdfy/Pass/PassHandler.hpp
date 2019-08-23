@@ -17,6 +17,7 @@ namespace pass {
 
 using SpmdTUTy = std::vector<cfg::CFGNode *>;
 
+/// macro representing the type created for the pass function
 #define PASS(FUNCTION, PASS_TYPE_NAME)                                         \
     struct PASS_TYPE_NAME {                                                    \
         constexpr static auto name{#PASS_TYPE_NAME};                           \
@@ -28,6 +29,8 @@ using SpmdTUTy = std::vector<cfg::CFGNode *>;
         bool invoke() { return handler.invoke(); }                             \
     };
 
+/// implements the invocation of the  pass
+// FIXME: Do I require this?
 template <class Fn, class Tuple, unsigned long... I>
 bool invoke_impl(Fn &&function, SpmdTUTy &spmd_tu,
                  clang::ASTContext &ast_context, Workspace &workspace,
@@ -36,6 +39,14 @@ bool invoke_impl(Fn &&function, SpmdTUTy &spmd_tu,
                     std::get<I>(invoke_arguments)...);
 }
 
+/**
+ * \class PassHandler
+ * \ingroup Pass
+ *
+ * \brief Creates a handler class to the pass types that are generated. It was
+ * inspired by Allen's Handler structure
+ *
+ * */
 template <typename ReturnTy, typename... ParamTy> struct PassHandler {
     std::string name = "";
     std::tuple<ParamTy...> invoke_arguments;
@@ -51,6 +62,7 @@ template <typename ReturnTy, typename... ParamTy> struct PassHandler {
                                            Workspace &, ParamTy...))
         : name(name), function(param_function) {}
 
+    /// sets the parameters for the pass
     void set_opts(SpmdTUTy &spmd_tutbl, clang::ASTContext &ast_context,
                   Workspace &workspace) {
         m_spmd_tutbl = &spmd_tutbl;
@@ -58,6 +70,7 @@ template <typename ReturnTy, typename... ParamTy> struct PassHandler {
         m_workspace = &workspace;
     }
 
+    /// invokes the pass on the CFG
     bool invoke() {
         SPMDFY_INFO("Invoking pass {}", name);
         return invoke_impl(
@@ -68,6 +81,7 @@ template <typename ReturnTy, typename... ParamTy> struct PassHandler {
     }
 };
 
+/// Used the deduce the type of the handler from function declaration
 template <typename R, typename... T>
 static PassHandler<R, T...> make_handler(const char *name,
                                          R(f)(SpmdTUTy &, clang::ASTContext &,
