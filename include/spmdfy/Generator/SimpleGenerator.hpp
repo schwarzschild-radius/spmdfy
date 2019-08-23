@@ -1,6 +1,7 @@
 #include <clang/AST/DeclVisitor.h>
 #include <clang/AST/RecursiveASTVisitor.h>
 #include <clang/AST/StmtVisitor.h>
+#include <clang/AST/TypeVisitor.h>
 
 #include <spmdfy/CUDA2ISPC.hpp>
 #include <spmdfy/Generator/Generator.hpp>
@@ -8,22 +9,36 @@
 #include <spmdfy/utils.hpp>
 
 #include <sstream>
+#include <algorithm>
 
 namespace spmdfy {
 
-extern std::string ispc_macros;
-
+/**
+ * \class SimpleGenerator
+ * \ingroup CodeGen
+ *
+ * \brief A Simple ispc generator. It uses recursive visitation to generate ISPC
+ * code.
+ *
+ * */
 class SimpleGenerator
     : public ISPCGenerator,
       public clang::ConstDeclVisitor<SimpleGenerator, std::string>,
-      public clang::ConstStmtVisitor<SimpleGenerator, std::string> {
+      public clang::ConstStmtVisitor<SimpleGenerator, std::string>,
+      public clang::TypeVisitor<SimpleGenerator, std::string> {
     using clang::ConstDeclVisitor<SimpleGenerator, std::string>::Visit;
     using clang::ConstStmtVisitor<SimpleGenerator, std::string>::Visit;
+    using clang::TypeVisitor<SimpleGenerator, std::string>::Visit;
 
   public:
-    SimpleGenerator(clang::ASTContext &context, std::ostringstream &file_writer)
-        : m_context(context), m_sm(context.getSourceManager()),
-          m_lang_opts(context.getLangOpts()), m_file_writer(file_writer) {
+
+    using OStreamTy = std::ostringstream;
+
+    SimpleGenerator(clang::ASTContext &context, OStreamTy &file_writer)
+        : m_context(context), 
+          m_sm(context.getSourceManager()),
+          m_lang_opts(context.getLangOpts()),
+          m_file_writer(file_writer) {
         m_lang_opts.CPlusPlus = true;
         m_lang_opts.Bool = true;
     }
@@ -34,6 +49,9 @@ class SimpleGenerator
     auto Visit##NODE##Stmt(const clang::NODE##Stmt *)->std::string
 #define EXPR_VISITOR(NODE)                                                     \
     auto Visit##NODE##Expr(const clang::NODE##Expr *)->std::string
+#define TYPE_VISITOR(NODE)                                                     \
+    auto Visit##NODE##Type(const clang::NODE##Type *)->std::string
+
 #define CLEAR_STREAM(stream)                                                   \
     stream.str("");                                                            \
     stream.clear();
@@ -43,6 +61,8 @@ class SimpleGenerator
     DECL_VISITOR(Namespace);
     DECL_VISITOR(ParmVar);
     DECL_VISITOR(Declarator);
+    DECL_VISITOR(Field);
+    DECL_VISITOR(CXXConstructor);
 
     STMT_VISITOR(Compound);
     STMT_VISITOR(Decl);
@@ -51,7 +71,13 @@ class SimpleGenerator
 
     EXPR_VISITOR(Call);
 
+    TYPE_VISITOR(Builtin);
+    TYPE_VISITOR(Pointer);
+    TYPE_VISITOR(Record);
+    TYPE_VISITOR(IncompleteArray);
+
     auto VisitBinaryOperator(const clang::BinaryOperator *) -> std::string;
+    auto VisitQualType(clang::QualType) -> std::string;
     auto getISPCBaseType(std::string type) -> std::string;
 
     auto handleTranslationUnit(clang::ASTContext &context) -> bool override {
@@ -81,7 +107,11 @@ class SimpleGenerator
             case clang::Decl::Namespace:
                 VisitNamespaceDecl(llvm::cast<const clang::NamespaceDecl>(D));
                 break;
+            case clang::Decl::CXXRecord:
+                m_file_writer << VisitCXXRecordDecl(llvm::cast<const clang::CXXRecordDecl>(D));
+                break;
             default:
+                SPMDFY_ERROR("Declaration {} not yet supported", D->getDeclKindName());
                 break;
             }
         }
@@ -98,12 +128,15 @@ class SimpleGenerator
         CXXCONSTRUCTOR,
         STRUCT,
     };
+    // AST specific variables
     clang::ASTContext &m_context;
     clang::SourceManager &m_sm;
     clang::LangOptions m_lang_opts;
-    std::ostringstream &m_file_writer;
-    std::ostringstream m_shmem;
-    std::ostringstream m_kernel_context;
+
+
+    OStreamTy &m_file_writer;
+    OStreamTy m_shmem;
+    OStreamTy m_kernel_context;
     TUContext m_tu_context;
     int m_scope = -1;
 };

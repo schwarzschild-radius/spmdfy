@@ -23,8 +23,8 @@
 #include <nlohmann/json.hpp>
 
 // spmdfy headers
-#include <spmdfy/Generator/SimpleGenerator.hpp>
 #include <spmdfy/Generator/CFGGenerator/CFGGenerator.hpp>
+#include <spmdfy/Generator/SimpleGenerator.hpp>
 #include <spmdfy/SpmdfyStmtVisitor.hpp>
 #include <spmdfy/utils.hpp>
 
@@ -34,6 +34,14 @@ namespace mat = clang::ast_matchers;
 
 namespace spmdfy {
 
+/**
+ * \class SpmdfyConsumer
+ * \ingroup Frontend
+ *
+ * \brief Class initiates the translation phase by providing the handle to AST
+ * to the ISPCGenerator
+ *
+ * */
 class SpmdfyConsumer : public clang::ASTConsumer {
   public:
     explicit SpmdfyConsumer(clang::ASTContext *m_context,
@@ -42,6 +50,8 @@ class SpmdfyConsumer : public clang::ASTConsumer {
         this->m_lang_opts = m_context->getLangOpts();
         this->gen = llvm::make_unique<CFGGenerator>(*m_context, file_writer);
     }
+
+    /// creates the handle translation unit and passes it to the codegen methods
     virtual void HandleTranslationUnit(clang::ASTContext &m_context);
 
   private:
@@ -51,6 +61,15 @@ class SpmdfyConsumer : public clang::ASTConsumer {
     clang::LangOptions m_lang_opts;
 };
 
+/**
+ * \class SpmdfyAction
+ * \ingroup Frontend
+ *
+ * \brief Creates clang tooling drives this class to create a consumer and
+ * provides a compiler instance to the consumer. This provides the access the
+ * AST for traversal
+ *
+ * */
 class SpmdfyAction : public clang::ASTFrontendAction {
 
   public:
@@ -61,16 +80,28 @@ class SpmdfyAction : public clang::ASTFrontendAction {
         -> std::unique_ptr<clang::ASTConsumer> override;
 
   private:
-    std::ostringstream& m_file_writer;
+    std::ostringstream &m_file_writer;
 };
 
-class SpmdfyFrontendActionFactory : public clang::tooling::FrontendActionFactory{
-    public:
-        template<typename ...ParamsTy>
-        SpmdfyFrontendActionFactory(ParamsTy&... params) : action(new SpmdfyAction(params...)) {}
-        virtual auto create() -> clang::FrontendAction * override;
-    private:
-        clang::FrontendAction* action;
+/**
+ * \class SpmdfyFrontendActionFactory
+ * \ingroup Frontend
+ *
+ * \brief A factory method to create a Frontend action
+ *
+ * */
+class SpmdfyFrontendActionFactory
+    : public clang::tooling::FrontendActionFactory {
+  public:
+    template <typename... ParamsTy>
+    SpmdfyFrontendActionFactory(ParamsTy &... params)
+        : action(new SpmdfyAction(params...)) {}
+
+    /// creates the frontend action
+    virtual auto create() -> clang::FrontendAction * override;
+
+  private:
+    clang::FrontendAction *action;
 };
 
 } // namespace spmdfy

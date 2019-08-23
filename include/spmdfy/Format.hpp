@@ -14,6 +14,13 @@ using clang::tooling::Replacements;
 
 namespace spmdfy {
 namespace format {
+
+/**
+ * \ingroup Frontend
+ *
+ * \brief formats the generated ISPC code using clang-format.
+ *
+ * */
 bool format(StringRef FileName);
 } // namespace format
 } // namespace spmdfy

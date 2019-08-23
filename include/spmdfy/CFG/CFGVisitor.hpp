@@ -10,7 +10,15 @@ namespace spmdfy {
 namespace cfg {
 
 using SpmdTUTy = std::vector<cfg::CFGNode *>;
-// FIXME: Why CRTP and Virtual???
+/**
+ * \class CFGVisitor
+ * \ingroup CFG
+ *
+ * \brief A Visitor interface the CFG inspired by clang's ASTVisitors. The
+ * Visitors can be overriden by the inherited nodes.
+ *
+ * */
+// FIXME: Why CRTP and Virtual at the same time???
 template <typename Derived, typename RetTy> class CFGVisitor {
   public:
 #define DISPATCH(NAME)                                                         \

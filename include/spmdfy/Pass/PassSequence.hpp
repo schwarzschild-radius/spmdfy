@@ -4,6 +4,12 @@ namespace pass {
 
 #define SEQUENCE_T(...) using pass_sequence_t = std::tuple<__VA_ARGS__>;
 
+/**
+ * \ingroup Pass
+ * \brief A tuple representing pass sequence that will be executed in the order
+ *
+ * */
+
 // clang-format off
 SEQUENCE_T(
            locate_ast_nodes_pass_t,

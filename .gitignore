@@ -42,3 +42,6 @@ build/
 
 # experiments directory
 experiments/
+
+# doxgen html directory
+docs/html/
