@@ -6,7 +6,10 @@ namespace spmdfy {
     auto SimpleGenerator::Visit##NODE##BASE(const clang::NODE##BASE *NAME)     \
         ->std::string
 
+#define UNUSED(X)
 #define DECL_DEF_VISITOR(NODE, NAME) DEF_VISITOR(NODE, Decl, NAME)
+#define STMT_DEF_VISITOR(NODE, NAME) DEF_VISITOR(NODE, Stmt, NAME)
+#define TYPE_DEF_VISITOR(NODE, NAME) DEF_VISITOR(NODE, Type, NAME)
 
 auto rmCastIf(const clang::Expr *expr) -> const clang::Expr * {
     if (llvm::isa<const clang::ImplicitCastExpr>(expr)) {
@@ -27,7 +30,7 @@ std::string SimpleGenerator::getISPCBaseType(std::string from) {
 
 DECL_DEF_VISITOR(Declarator, dec_decl) {
     SPMDFY_INFO("Visiting DeclarationDecl: {}", SRCDUMP(dec_decl));
-    std::ostringstream decl_gen;
+    OStreamTy decl_gen;
     std::string var_name = dec_decl->getNameAsString();
     clang::QualType type = dec_decl->getType();
     clang::PrintingPolicy pm(m_lang_opts);
@@ -50,43 +53,83 @@ DECL_DEF_VISITOR(Declarator, dec_decl) {
 
 DECL_DEF_VISITOR(ParmVar, param_decl) {
     SPMDFY_INFO("Visiting ParmVarDecl: {}", SRCDUMP(param_decl));
-    std::ostringstream param_gen;
+    OStreamTy param_gen;
     if (m_tu_context == TUContext::CUDA_KERNEL) {
         clang::QualType param_type = param_decl->getType();
         param_gen << "uniform ";
-        if(param_type->isPointerType()){
-            param_gen << getISPCBaseType(param_type->getPointeeType().getAsString()) << " ";
+        if (param_type->isPointerType()) {
+            param_gen << getISPCBaseType(
+                             param_type->getPointeeType().getAsString())
+                      << " ";
             param_gen << param_decl->getNameAsString() << "[]";
-        }else{
-            param_gen << VisitVarDecl(llvm::cast<const clang::VarDecl>(param_decl));
+        } else {
+            param_gen << VisitVarDecl(
+                llvm::cast<const clang::VarDecl>(param_decl));
         }
         SPMDFY_WARN("SPMDFIED ParmVarDecl {}", param_gen.str());
     }
     return param_gen.str();
 }
 
-DECL_DEF_VISITOR(Var, var_decl) {
-    SPMDFY_INFO("Visiting VarDecl: {}", SRCDUMP(var_decl));
-    std::ostringstream var_gen;
-    std::string var_name = var_decl->getNameAsString();
-    clang::QualType type = var_decl->getType().getDesugaredType(m_context);
-    clang::PrintingPolicy pm(m_lang_opts);
-    std::string var_base_type = getISPCBaseType(type.getAsString(pm));
+auto SimpleGenerator::VisitQualType(clang::QualType qual) -> std::string {
+    SPMDFY_INFO("Visiting QualType: {}", qual.getAsString());
+    OStreamTy qual_gen;
 
-    if (type.hasQualifiers()) {
-        var_gen << type.getQualifiers().getAsString() << " ";
-        var_base_type = type.getUnqualifiedType().getDesugaredType(m_context).getAsString();
-        var_base_type = getISPCBaseType(var_base_type);
-        SPMDFY_WARN("VarType: {}", var_base_type);
+    if (qual.hasQualifiers()) {
+        qual_gen << qual.getQualifiers().getAsString() << " ";
+        qual = qual.getUnqualifiedType().getDesugaredType(m_context);
     }
 
-    if (type->isIncompleteType()) {
-        var_base_type =
-            type->getAsArrayTypeUnsafe()->getElementType().getAsString();
-        var_base_type = getISPCBaseType(var_base_type);
+    qual_gen << Visit(qual.getTypePtr());
+
+    return qual_gen.str();
+}
+
+TYPE_DEF_VISITOR(Builtin, builtin) {
+    clang::PrintingPolicy pm(m_lang_opts);
+    SPMDFY_INFO("Visiting BuiltinType: {}", builtin->getName(pm).str());
+    OStreamTy type_gen;
+    type_gen << getISPCBaseType(builtin->getName(pm));
+    return type_gen.str();
+}
+
+TYPE_DEF_VISITOR(IncompleteArray, incompl_array) {
+    SPMDFY_INFO("Visiting IncompleteArrayType: {}",
+                incompl_array->desugar().getAsString());
+    OStreamTy incompl_array_gen;
+    incompl_array_gen << incompl_array->getElementType().getAsString();
+    return incompl_array_gen.str();
+}
+
+TYPE_DEF_VISITOR(Pointer, ptr) {
+    SPMDFY_INFO("Visiting PointerType:");
+    OStreamTy ptr_gen;
+    ptr_gen << VisitQualType(ptr->getPointeeType()) << "*";
+    return ptr_gen.str();
+}
+
+TYPE_DEF_VISITOR(Record, record) {
+    SPMDFY_INFO("Visiting RecordType: {}",
+                record->getDecl()->getNameAsString());
+    OStreamTy record_gen;
+
+    record_gen << record->getDecl()->getNameAsString();
+
+    return record_gen.str();
+}
+
+DECL_DEF_VISITOR(Var, var_decl) {
+    SPMDFY_INFO("Visiting VarDecl: {}", SRCDUMP(var_decl));
+    OStreamTy var_gen;
+    std::string var_name = var_decl->getNameAsString();
+    clang::QualType type = var_decl->getType();
+    std::string var_base_type = VisitQualType(type);
+
+    if (type->isIncompleteType() &&
+        var_decl->hasAttr<clang::CUDASharedAttr>()) {
         var_name = "* " + var_name;
-        var_name += " = uniform new uniform " + getISPCBaseType(var_base_type) +
-                    "[shared_memory_size]";
+        var_name +=
+            " = uniform new uniform " + var_base_type + "[shared_memory_size]";
     } else if (type->isConstantArrayType()) {
         do {
             auto const_arr_type = clang::cast<clang::ConstantArrayType>(type);
@@ -96,25 +139,31 @@ DECL_DEF_VISITOR(Var, var_decl) {
                 "]";
             type = const_arr_type->getElementType();
         } while (type->isConstantArrayType());
-        var_base_type = type.getAsString();
+        var_base_type = getISPCBaseType(type.getAsString());
     } else if (!type->isBuiltinType() && !type->isPointerType()) {
         SPMDFY_ERROR("Not Builtin Type: {}", type.getAsString());
         var_name = "&" + var_name;
     }
 
-    if (const clang::Expr *init = var_decl->getInit();
-        init && m_tu_context != TUContext::STRUCT) {
+    if (const clang::Expr *initwc = var_decl->getInit();
+        (initwc && m_tu_context != TUContext::STRUCT)) {
+        const clang::Expr *init = rmCastIf(initwc);
         std::string var_init = SRCDUMP(init);
         if (var_base_type.find("int8") != -1) {
-            if (llvm::isa<const clang::CharacterLiteral>(rmCastIf(init))) {
+            if (llvm::isa<const clang::CharacterLiteral>(init)) {
                 var_init = std::to_string(
-                    llvm::cast<const clang::CharacterLiteral>(rmCastIf(init))
+                    llvm::cast<const clang::CharacterLiteral>(init)
                         ->getValue());
             }
         }
         var_name += " = ";
+        if (type->isPointerType() &&
+            llvm::isa<clang::CXXNullPtrLiteralExpr>(init)) {
+            var_init = "NULL";
+        }
         if (!type->isBuiltinType()) {
             if (llvm::isa<const clang::CXXConstructExpr>(init)) {
+                SPMDFY_INFO("Generating CXXConstructExpr");
                 const clang::CXXConstructExpr *ctor_expr =
                     llvm::cast<const clang::CXXConstructExpr>(init);
                 std::string ctor_type;
@@ -136,7 +185,7 @@ DECL_DEF_VISITOR(Var, var_decl) {
 
     if (var_decl->hasAttr<clang::CUDASharedAttr>()) {
         m_shmem << "uniform " << var_gen.str() << ";\n";
-        return "";
+        return ";\n";
     }
 
     if (m_tu_context == TUContext::CUDA_KERNEL && m_scope == 0) {
@@ -152,7 +201,7 @@ DECL_DEF_VISITOR(Var, var_decl) {
 }
 
 DEF_VISITOR(Decl, Stmt, decl_stmt) {
-    std::ostringstream decl_gen;
+    OStreamTy decl_gen;
     SPMDFY_INFO("Visiting DeclStmt: {}", SRCDUMP(decl_stmt));
     for (auto decl : decl_stmt->decls()) {
         decl_gen << VisitVarDecl(llvm::cast<const clang::VarDecl>(decl));
@@ -161,34 +210,45 @@ DEF_VISITOR(Decl, Stmt, decl_stmt) {
 }
 
 DEF_VISITOR(Compound, Stmt, cpmd_stmt) {
-    std::ostringstream cpmd_gen;
-    SPMDFY_INFO("Visiting CompoundStmt: {}", SRCDUMP(cpmd_stmt));
+    OStreamTy cpmd_gen;
+    SPMDFY_INFO("Visiting CompoundStmt:");
     if (m_tu_context == TUContext::CUDA_KERNEL) {
-        cpmd_gen << "ISPC_BLOCK_START"
-                 << "\n";
+        cpmd_gen << "{\n";
+        if (m_scope == -1) {
+            cpmd_gen << "ISPC_GRID_START" 
+                     << "\n"
+                     << "ISPC_BLOCK_START"
+                     << "\n";
+        }
         cpmd_gen << m_kernel_context.str();
         m_scope++;
-        for (auto stmt = cpmd_stmt->body_begin(); stmt != cpmd_stmt->body_end();
-             stmt++) {
-            SPMDFY_WARN("Statment Type: {}", (*stmt)->getStmtClassName());
-            if (auto stmt_str = Visit(*stmt); stmt_str != "") {
-                cpmd_gen << stmt_str << ";\n";
-                continue;
-            }
-            std::string line = SRCDUMP(*stmt);
-            if (line.back() != ';' && line.size())
+        for (auto stmt : cpmd_stmt->body()) {
+            SPMDFY_WARN("Statment Type: {}", stmt->getStmtClassName());
+            if (auto stmt_str = Visit(stmt); stmt_str == std::string()) {
+                std::string line = SRCDUMP(stmt);
                 cpmd_gen << line << ";\n";
+            } else if (stmt_str != ";\n") {
+                cpmd_gen << stmt_str;
+                if(stmt_str.back() != '}'){
+                    cpmd_gen << ";\n";
+                }
+            }
         }
-        cpmd_gen << "ISPC_BLOCK_END"
-                 << "\n";
         m_scope--;
+        if (m_scope == -1){
+            cpmd_gen << "ISPC_BLOCK_END"
+                     << "\n"
+                     << "ISPC_GRID_END";
+                     << "\n";
+        }
+        cpmd_gen << "}\n";
     }
     return cpmd_gen.str();
 }
 
 DEF_VISITOR(For, Stmt, for_stmt) {
-    std::ostringstream for_gen;
-    SPMDFY_INFO("Visiting ForStmt: {}", SRCDUMP(for_stmt));
+    OStreamTy for_gen;
+    SPMDFY_INFO("Visiting ForStmt:");
     auto for_body = for_stmt->getBody();
     if (for_body) {
         m_scope++;
@@ -197,14 +257,13 @@ DEF_VISITOR(For, Stmt, for_stmt) {
                               for_body->getSourceRange().getBegin());
         for_gen << Visit(for_body);
         m_scope--;
-        for_gen << "}\n";
     }
     return for_gen.str();
 }
 
 DEF_VISITOR(If, Stmt, if_stmt) {
-    std::ostringstream if_gen;
-    SPMDFY_INFO("Visiting IfStmt: {}", SRCDUMP(if_stmt));
+    OStreamTy if_gen;
+    SPMDFY_INFO("Visiting IfStmt:");
     if_gen << "if (";
     const clang::Expr *if_cond = if_stmt->getCond();
     if (if_cond) {
@@ -213,13 +272,11 @@ DEF_VISITOR(If, Stmt, if_stmt) {
                              if_cond->getSourceRange().getEnd())
                << ")";
     }
-    if_gen << "{\n";
     const clang::Stmt *if_then = if_stmt->getThen();
     if (if_then) {
         m_scope++;
         if_gen << Visit(if_then);
     }
-    if_gen << "}";
     m_scope--;
     const clang::Stmt *if_else = if_stmt->getElse();
     if (if_else) {
@@ -228,27 +285,24 @@ DEF_VISITOR(If, Stmt, if_stmt) {
             if_gen << Visit(if_else);
             return if_gen.str();
         }
-        if_gen << "{\n";
         m_scope++;
         if_gen << Visit(if_else);
-        if_gen << "}";
         m_scope--;
     }
-    if_gen << "\n";
     return if_gen.str();
 }
 
 auto SimpleGenerator::VisitBinaryOperator(const clang::BinaryOperator *binop)
     -> std::string {
     SPMDFY_INFO("Visiting BinaryOperatorExpr: {}", SRCDUMP(binop));
-    std::ostringstream binop_gen;
-    binop_gen << SRCDUMP(binop) << ";\n";
+    OStreamTy binop_gen;
+    binop_gen << SRCDUMP(binop);
     return binop_gen.str();
 }
 
 DEF_VISITOR(Call, Expr, call_expr) {
     SPMDFY_INFO("Visiting CallExpr: {}", SRCDUMP(call_expr));
-    std::ostringstream call_gen;
+    OStreamTy call_gen;
     const clang::FunctionDecl *callee = call_expr->getDirectCallee();
     std::string callee_name = callee->getNameAsString();
     if (callee_name == "__syncthreads") {
@@ -277,7 +331,7 @@ DEF_VISITOR(Call, Expr, call_expr) {
 
 DECL_DEF_VISITOR(Function, func_decl) {
     SPMDFY_INFO("Visiting FunctionDecl {}", func_decl->getNameAsString());
-    std::ostringstream func_gen;
+    OStreamTy func_gen;
     if (func_decl->hasAttr<clang::CUDAGlobalAttr>()) {
         m_tu_context = TUContext::CUDA_KERNEL;
         std::string func_body = Visit(func_decl->getBody());
@@ -288,11 +342,11 @@ DECL_DEF_VISITOR(Function, func_decl) {
         }
         func_gen << "){\n";
         func_gen << "ISPC_GRID_START"
-                         << "\n";
+                 << "\n";
         func_gen << m_shmem.str();
         func_gen << func_body;
         func_gen << "ISPC_GRID_END"
-                         << "\n";
+                 << "\n";
         func_gen << "}\n";
     } else if (func_decl->hasAttr<clang::CUDADeviceAttr>()) {
         m_tu_context = TUContext::CUDA_DEVICE_FUNCTION;
@@ -305,12 +359,38 @@ DECL_DEF_VISITOR(Function, func_decl) {
     return func_gen.str();
 }
 
+DECL_DEF_VISITOR(Field, field) {
+    SPMDFY_INFO("Visiting Field: {}", SRCDUMP(field));
+    OStreamTy field_gen;
+    clang::QualType type = field->getType();
+    field_gen << VisitQualType(type) << " " << field->getNameAsString();
+    return field_gen.str();
+}
+
+DECL_DEF_VISITOR(CXXConstructor, ctor) {
+    SPMDFY_INFO("Visiting CXXConstructorDecl: {}", SRCDUMP(ctor));
+    OStreamTy ctor_gen;
+
+    return ctor_gen.str();
+}
+
 DECL_DEF_VISITOR(CXXRecord, struct_decl) {
-    if (m_tu_context != TUContext::GLOBAL) {
+    if (!struct_decl->isStruct() || m_tu_context != TUContext::GLOBAL ||
+        std::none_of(
+            struct_decl->ctor_begin(), struct_decl->ctor_end(),
+            [](auto ctor_decl) {
+                if (ctor_decl->isDefaultConstructor() &&
+                    ctor_decl->template hasAttr<clang::CUDADeviceAttr>()) {
+                    return true;
+                }
+                return false;
+            })) {
+        SPMDFY_ERROR("Cannot spmdfy {} struct", struct_decl->getNameAsString());
         return "";
     }
+
     SPMDFY_INFO("Visiting CXXRecordDecl: {}", SRCDUMP(struct_decl));
-    std::ostringstream struct_gen;
+    OStreamTy struct_gen;
     m_tu_context = TUContext::STRUCT;
 
     std::string struct_name = struct_decl->getNameAsString();
@@ -318,12 +398,13 @@ DECL_DEF_VISITOR(CXXRecord, struct_decl) {
     struct_gen << "struct " << struct_name << "{\n";
     // members
     struct_gen << "// Fields\n";
-    for (auto field = struct_decl->field_begin();
-         field != struct_decl->field_end(); field++) {
-        struct_gen << Visit(llvm::cast<const clang::DeclaratorDecl>(*field));
-        struct_gen << ";\n";
+    for (auto field : struct_decl->fields()) {
+        struct_gen << Visit(field) << ";\n";
     }
     struct_gen << "};\n";
+
+    // generate constructors
+
     m_tu_context = TUContext::GLOBAL;
     return struct_gen.str();
 }
