@@ -238,7 +238,7 @@ DEF_VISITOR(Compound, Stmt, cpmd_stmt) {
         if (m_scope == -1){
             cpmd_gen << "ISPC_BLOCK_END"
                      << "\n"
-                     << "ISPC_GRID_END";
+                     << "ISPC_GRID_END"
                      << "\n";
         }
         cpmd_gen << "}\n";

@@ -87,7 +87,6 @@ class SimpleGenerator
             SPMDFY_ERROR("Cannot Traverse Decl");
             return true;
         }
-        m_file_writer << ispc_macros << '\n';
         for (auto D : traverse_decl->decls()) {
             if (!isExpansionInMainFile(m_sm, D)) {
                 continue;

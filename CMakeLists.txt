@@ -12,7 +12,6 @@ endif()
 
 add_executable(spmdfy src/main.cpp 
                       src/SpmdfyAction.cpp
-                      src/SpmdfyStmtVisitor.cpp
                       src/utils.cpp
                       src/Format.cpp
                       src/CUDA2ISPC.cpp

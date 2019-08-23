@@ -12,7 +12,9 @@
 #include <fstream>
 #include <sstream>
 
-extern std::string spmdfy::ispc_macros;
+namespace spmdfy {
+extern std::string ispc_macros;
+}
 
 int main(int argc, const char **argv) {
     spmdfy::Logger::initLogger();
@@ -82,7 +84,8 @@ int main(int argc, const char **argv) {
         if (!toggle_ispc_macros) {
             out_file << spmdfy::ispc_macros;
         } else {
-            out_file << "#include \"ISPCMacros.ispc.h\"" << "\n";
+            out_file << "#include \"ISPCMacros.ispc.h\""
+                     << "\n";
         }
         out_file << tu_stream.str();
         out_file.close();

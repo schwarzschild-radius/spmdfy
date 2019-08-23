@@ -25,7 +25,6 @@
 // spmdfy headers
 #include <spmdfy/Generator/CFGGenerator/CFGGenerator.hpp>
 #include <spmdfy/Generator/SimpleGenerator.hpp>
-#include <spmdfy/SpmdfyStmtVisitor.hpp>
 #include <spmdfy/utils.hpp>
 
 namespace nl = nlohmann;
