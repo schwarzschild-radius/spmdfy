@@ -67,7 +67,7 @@ RUN git clone https://github.com/schwarzschild-radius/spmdfy.git
 
 WORKDIR /usr/home/spmdfy
 
-RUN git checkout baseline && mkdir build
+RUN git checkout master && mkdir build
 
 WORKDIR /usr/home/spmdfy/build
 
