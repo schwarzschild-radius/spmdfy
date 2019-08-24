@@ -4,38 +4,41 @@ namespace spmdfy {
 
 namespace pass {
 
-#define CFGNODE_DEF_VISITOR(NODE, NAME)                                        \
-    auto DuplicatePartialNodes::Visit##NODE##Node(cfg::NODE##Node *NAME)->bool
-
 #define CASTAS(TYPE, NODE) dynamic_cast<TYPE>(NODE)
 
-bool duplicatePartialNodes(SpmdTUTy &spmd_tu, clang::ASTContext &ast_context,
-                           Workspace &workspace) {
-    DuplicatePartialNodes finder(spmd_tu, ast_context, workspace);
-    finder.HandleSpmdTU(spmd_tu);
-    return false;
-}
-
-static std::string getKernelNodeName(cfg::CFGNode *node) {
-    auto curr_node = node;
-    while (curr_node->getNodeType() != cfg::CFGNode::KernelFunc) {
-        curr_node = curr_node->getPrevious();
-    }
-    return curr_node->getName();
-}
-
-auto DuplicatePartialNodes::duplicateInternalNode(cfg::InternalNode * node) -> cfg::InternalNode* {
-    auto duplicate = new cfg::InternalNode(m_ast_context, node->getInternalNode());
+auto duplicateInternalNode(clang::ASTContext &ast_context,
+                           cfg::InternalNode *node) -> cfg::InternalNode * {
+    auto duplicate =
+        new cfg::InternalNode(ast_context, node->getInternalNode());
     return duplicate;
 }
 
-CFGNODE_DEF_VISITOR(ISPCBlock, block) {
-    auto kernel = getKernelNodeName(block);
-    cfg::CFGNode* hook = block;
-    for(auto var : m_workspace.partial_nodes[kernel]){
-        hook = hook->splitEdge(duplicateInternalNode(var));
+bool duplicatePartialNodes(SpmdTUTy &spmd_tu, clang::ASTContext &ast_context,
+                           Workspace &workspace) {
+    for (auto decl : spmd_tu) {
+        if (ISNODE(decl, cfg::CFGNode::KernelFunc)) {
+            auto name = decl->getName();
+            SPMDFY_INFO("[] Visting KernelFuncNode {}", name);
+            auto &partial_nodes = workspace.partial_nodes[name];
+            int block_count = 0;
+            for (auto curr_node = decl->getNext();
+                 !(ISNODE(curr_node, cfg::CFGNode::Exit));
+                 curr_node = curr_node->getNext()) {
+                if (ISNODE(curr_node, cfg::CFGNode::ISPCBlock)) {
+                    block_count++;
+                    for (auto i = 0; i < block_count; i++) {
+                        for (auto var : partial_nodes[i]) {
+                            SPMDFY_INFO("[DuplicatePartial Nodes] Inserting {}",
+                                        var->getName());
+                            curr_node = curr_node->splitEdge(
+                                duplicateInternalNode(ast_context, var));
+                        }
+                    }
+                }
+            }
+        }
     }
-    return true;
+    return false;
 }
 
 } // namespace pass
