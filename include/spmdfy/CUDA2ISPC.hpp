@@ -8,4 +8,4 @@ extern const std::map<std::string, std::string> g_SpmdfyTypeMap;
 extern const std::map<std::string, std::string> g_SpmdfyAtomicMap;
 
 /// A Function map between CUDA MathIntrinsics to ISPC Math Functions
-extern const std::map<std::string, std::string> g_SpmdfyMathInstrinsicsMap;
+extern const std::map<std::string, std::pair<bool, std::string>> g_SpmdfyMathInstrinsicsMap;
