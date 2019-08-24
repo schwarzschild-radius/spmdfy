@@ -1,3 +1,11 @@
+/** \file CFGCodeGen.hpp
+ *  \brief Class for generating ISPC from CFG
+ *
+ *  \author Pradeep Kumar  (schwarzschild-radius/@pt_of_no_return)
+ *  \bug No know bugs
+ *  \defgroup CodeGen
+ * */
+
 #ifndef CFGCODEGEN_HPP
 #define CFGCODEGEN_HPP
 
@@ -46,11 +54,11 @@ class CFGCodeGen : public clang::ConstDeclVisitor<CFGCodeGen, std::string>,
         m_lang_opts.CPlusPlus = true;
         m_lang_opts.Bool = true;
     }
-    /// returns generated ISPC code
+    /// \return returns generated ISPC code
     auto get() -> std::string const;
 
-    /// returns generated ISPC code from CFGNode
-    /// @params CFGNode*
+    /// \return generated ISPC code from CFGNode
+    /// \param CFGNode*
     auto getFrom(cfg::CFGNode *) -> std::string const;
 
     /// traverses the CFG

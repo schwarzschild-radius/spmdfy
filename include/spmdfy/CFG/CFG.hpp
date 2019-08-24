@@ -1,10 +1,11 @@
-//===- CFG.hpp - Classes for representing CFG Nodes -----------*- C++ -*-===//
-//
-//===----------------------------------------------------------------------===//
-//
-//  This file defines the CFG subclasses.
-//
-//===----------------------------------------------------------------------===//
+/** \file CFG.hpp
+ *  \brief Classes for representing CFG Nodes
+ *  This file defines the CFG subclasses which form the nodes of the CFG.
+ *
+ *  \author Pradeep Kumar  (schwarzschild-radius/@pt_of_no_return)
+ *  \bug No know bugs
+ *  \defgroup CFG
+ * */
 
 #ifndef SPMDFY_CFG_HPP
 #define SPMDFY_CFG_HPP
@@ -24,7 +25,7 @@ namespace spmdfy {
 
 namespace cfg {
 
-/// Variant type using to represent any internal node
+/// Variant type used to represent any internal node
 using InternalNodeTy = std::variant<const clang::Decl *, const clang::Stmt *,
                                     const clang::Expr *, const clang::Type *>;
 
@@ -45,15 +46,35 @@ class ExitNode;
  * */
 class CFGEdge {
   public:
-    enum Edge { Partial, Complete };
+    /// \enum Edge enum class
+    enum Edge {
+        Partial, ///< Edge of Partial Type
+        Complete ///< Edge of Complete Type
+    };
 
-    // getters
+    /**
+     * \return returns the EdgeType of Edge
+     */
     auto getEdgeType() -> Edge const { return m_edge; }
+
+    /**
+     * \return returns stringified version of Edge
+     */
     auto getEdgeTypeName() -> std::string const;
+
+    /**
+     * \return returns the pointer to the terminal node of CFGNode type
+     */
     auto getTerminal() -> CFGNode *const;
 
-    // setters
+    /**
+     * \param terminal terminal node that the owner of the edge points to
+     * \param edge_type typeo of the edge(default: Complete)
+     * \return returns the terminal node that was passed
+     */
     auto setTerminal(CFGNode *terminal, Edge edge_type = Complete) -> CFGNode *;
+
+    /// set the edgetype
     auto setEdgeType(Edge edge_type) -> Edge;
 
   private:
@@ -64,7 +85,7 @@ class CFGEdge {
 // :CFGEdge
 
 /**
- * \class CFGNoode
+ * \class CFGNode
  * \ingroup CFG
  *
  * \brief Represents nodes in the CFG
@@ -75,7 +96,7 @@ class CFGEdge {
 class CFGNode {
   public:
     virtual ~CFGNode() {}
-    /// Enumeration representing various types of CFGNodes
+    /// \enum Node enum class
     enum Node {
         Forward,
         Backward,
@@ -96,29 +117,94 @@ class CFGNode {
         ISPCGridExit
     };
 
-    /// Enumeration representing the position of the node in CFG
+    /// \enum Enumeration representing the position of the node in CFG
     enum Context { Global, Kernel, Device };
 
-    // getters
+    /**
+     * \return returns the node type
+     */
     auto getNodeType() -> Node const { return m_node_type; }
+
+    /**
+     * \return returns context type
+     */
     auto getContextType() -> Context const { return m_context; }
+
+    /**
+     * \param context of type Context
+     * \return returns the terminal node that was passed
+     */
     auto setContext(Context &context) -> bool {
         m_context = context;
         return false;
     }
+
+    /**
+     * \return returns stringified version of node
+     */
     auto getNodeTypeName() -> std::string const;
+
+    /**
+     * \return returns stringified version of node
+     */
     auto getContextTypeName() -> std::string const;
 
     // virtual methods
+    /**
+     * \return returns the source of the node in the AST or the name of the node
+     * if it is not part of the AST
+     */
     virtual auto getSource() -> std::string const;
+
+    /**
+     * \return sets the source of the node
+     */
     virtual auto setSource(const std::string &) -> std::string;
+
+    /**
+     * \returns string based on the following node types
+     *  1. GlobalVar - variable name
+     *  2. Forward - returns Forward
+     *  3. Backward - returns Backward
+     *  4. KernelFunc - returns the function name
+     *  5. Conditional - returns Conditional
+     *  6. IfStmt - returns IfStmt
+     *  7. ForStmt - returns ForStmt
+     *  8. Reconv - returns Reconv
+     *  9. Internal - returns the kind of the statement e.g. Var, CallExpr etc
+     *  10. ExitNode - return Exit
+     */
     virtual auto getName() -> std::string const;
+
+    /**
+     * \param node - takes BiDirectNode* to insert next to the current node
+     * \return returns the inserted node
+     */
     virtual auto splitEdge(BiDirectNode *) -> BiDirectNode *;
+
+    /**
+     * \return returns next node in the control flow
+     */
     virtual auto getNext() -> CFGNode *const;
+
+    /**
+     * sets the next node in the control flow
+     * \param node - node to be inserted
+     * \param edge_type - type of the control flow edge(default: Complete)
+     * \return returns stringified version of node
+     */
     virtual auto setNext(CFGNode *node,
                          CFGEdge::Edge edge_type = CFGEdge::Complete)
         -> CFGNode *;
+
+    /**
+     * \return returns the previous node in the CFG
+     */
     virtual auto getPrevious() -> CFGNode *const;
+
+    /**
+     * \return sets the previous node in the CFG
+     */
     virtual auto setPrevious(CFGNode *node,
                              CFGEdge::Edge edge_type = CFGEdge::Complete)
         -> CFGNode *;
@@ -143,11 +229,15 @@ class GlobalVarNode : public CFGNode {
   public:
     GlobalVarNode(clang::ASTContext &ast_context,
                   const clang::VarDecl *var_decl);
-    /// returns name of the string
+    /**
+     * \return returns name of the string
+     */
     auto getName() -> std::string const override {
         return m_var_decl->getNameAsString();
     }
-    /// returns Var as it is the declaration kind of any variables decl;
+    /**
+     * \return returns Var as it is the declaration kind of any variables decl;
+     */
     auto getDeclKindString() -> std::string const {
         return m_var_decl->getDeclKindName();
     }
@@ -174,16 +264,23 @@ class ForwardNode : public virtual CFGNode {
     virtual ~ForwardNode() { delete m_next; }
     ForwardNode();
 
-    // override
-    /// gets the next CFGNode in the control flow
+    /**
+     * \return returns the next CFGNode in the control flow
+     */
     auto getNext() -> CFGNode *const override;
 
-    /// sets the next CFGNode in the control flow
-    auto setNext(CFGNode *, CFGEdge::Edge = CFGEdge::Complete)
+    /// sets
+    /**
+     * sets the next node in the control flow
+     * \param node - node to be inserted
+     * \param edge_type - type of the edge
+     * \return returns the next CFGNode in the control flow
+     */
+    auto setNext(CFGNode *node, CFGEdge::Edge edge_type = CFGEdge::Complete)
         -> CFGNode * override;
 
     /*
-     * \brief splitEdge splits the edge
+     * \brief splitEdge splits the edge from current node to the next node
      * from
      * u -> w
      * to
@@ -212,9 +309,16 @@ class BackwardNode : public virtual CFGNode {
   public:
     virtual ~BackwardNode() = default;
     BackwardNode();
-    /// gets the previous node in the CFG
+    /**
+     * \return returns the previous node
+     */
     virtual auto getPrevious() -> CFGNode *const;
-    /// sets the previous node in the CFG
+
+    /**
+     * \param node - node to be set
+     * \param edge_type - type of the edge(default = Complete)
+     * \return sets the previous node
+     */
     virtual auto setPrevious(CFGNode *node,
                              CFGEdge::Edge edge_type = CFGEdge::Complete)
         -> CFGNode *;
@@ -225,7 +329,7 @@ class BackwardNode : public virtual CFGNode {
 
 // :BackwardNode
 /**
- * \class BiDrectNode
+ * \class BiDirectNode
  * \ingroup CFG
  *
  * \brief Represents a birectional node in the CFG, a node that moves forward
@@ -258,11 +362,26 @@ class KernelFuncNode : public ForwardNode {
     KernelFuncNode(clang::ASTContext &ast_context,
                    const clang::FunctionDecl *func_decl);
 
+    /**
+     * \return returns the name of the function
+     */
     auto getName() -> std::string const override;
+
+    /**
+     * \return returns the pointer to FunctionDecl node in the AST
+     */
     auto getKernelNode() -> const clang::FunctionDecl *const;
-    /// gets the exit node
+
+    /**
+     * \return returns the handle to exit node(endo of function)
+     */
     auto getExit() -> ExitNode *const;
-    /// sets the exit node
+
+    /**
+     * \param node - pointer to exit node
+     * \param edge_type - type of edge (default = Complete)
+     * \return returns the exit node
+     */
     auto setExit(ExitNode *, CFGEdge::Edge edge_type = CFGEdge::Complete)
         -> ExitNode *;
 
@@ -288,9 +407,17 @@ class ConditionalNode : public BiDirectNode {
   public:
     virtual ~ConditionalNode() { delete reconv; }
     ConditionalNode(clang::ASTContext &ast_context, const clang::Stmt *stmt);
-    /// gets the reconvergence point
+
+    /**
+     * \return returns the reconvergence node
+     */
     auto getReconv() -> CFGNode *const;
-    /// sets the reconvergence point
+
+    /**
+     * \param node - reconv node
+     * \param node - type of the edge(default = Complete)
+     * \return returns the previous node
+     */
     auto setReconv(CFGNode *node, CFGEdge::Edge edge_type = CFGEdge::Complete)
         -> CFGNode *;
 
@@ -314,29 +441,46 @@ class IfStmtNode : public ConditionalNode {
     ~IfStmtNode() { delete false_b; }
     IfStmtNode(clang::ASTContext &ast_context, const clang::IfStmt *if_stmt);
 
-    /// gets the If statement's AST node
+    /**
+     * \return gets the If statement's AST node
+     */
     auto getIfStmt() -> const clang::IfStmt *const {
         return llvm::cast<const clang::IfStmt>(m_cond_stmt);
     }
 
-    /// calls split edge on the true edge and this the default behavious when
-    /// splitEdge is called
+    /**
+     * calls split edge on the true edge and this the default behavious when
+     * splitEdge is called
+     * \param node - node to be inserted
+     * \return returns the inserted node
+     */
     auto splitTrueEdge(BiDirectNode *) -> BiDirectNode *;
 
-    /// calls split edge on the false edge
+    /**
+     * calls split edge on the fase edge
+     * \param node - node to be inserted
+     * \return returns the inserted node
+     */
     auto splitFalseEdge(BiDirectNode *) -> BiDirectNode *;
 
-    /// returns the pointer to the true block
+    /// \return returns the pointer to the true block
     auto getTrueBlock() -> CFGNode *const;
 
-    /// returns the pointer to the false block
+    /// \return returns the pointer to the false block
     auto getFalseBlock() -> CFGNode *const;
 
-    /// sets the pointer to the true block
+    /**
+     * sets the pointer to the true block
+     * \param node - true block
+     * \return returns the inserted node
+     */
     auto setTrueBlock(CFGNode *node,
                       CFGEdge::Edge edge_type = CFGEdge::Complete) -> CFGNode *;
 
-    /// sets the pointer to the false block
+    /**
+     * sets the pointer to the false block
+     * \return returns the inserted node
+     */
     auto setFalseBlock(CFGNode *node,
                        CFGEdge::Edge edge_type = CFGEdge::Complete)
         -> CFGNode *;
@@ -360,8 +504,8 @@ class ForStmtNode : public ConditionalNode {
   public:
     ~ForStmtNode() = default;
     ForStmtNode(clang::ASTContext &ast_context, const clang::ForStmt *for_stmt);
-    // getters
-    /// gets the For statement's AST node
+
+    /// \return gets the For statement's AST node
     auto getForStmt() -> const clang::ForStmt *const {
         return llvm::cast<const clang::ForStmt>(m_cond_stmt);
     }
@@ -383,18 +527,23 @@ class ReconvNode : public BiDirectNode {
     ~ReconvNode() = default;
     ReconvNode(ConditionalNode *cond_node);
 
-    // getters
-    /// returns null as the I don't find a reason to traverse back through the
+    /// \return returns null as the I don't find a reason to traverse back through the
     /// reconv node(subject to change)
     auto setPrevious(CFGNode *node, CFGEdge::Edge edge_type)
         -> CFGNode * override;
 
-    /// sets the pointer to the start of the conditional control flow statement
+    /**
+     * Points the conditional node
+     * \param node - node in the CFG
+     * \param edge_type - type of the edge
+     * \return returns the conditional node
+     */
     auto setBack(CFGNode *node, CFGEdge::Edge edge_type = CFGEdge::Complete)
         -> CFGNode *;
 
-    /// returns the pointer to the start of the conditional control flow
-    /// statement
+    /**
+     * \return returns the conditional node
+     */
     auto getBack() -> CFGNode *const;
 
   private:
@@ -415,16 +564,17 @@ class InternalNode : public BiDirectNode {
     ~InternalNode() = default;
     InternalNode(clang::ASTContext &ast_context, InternalNodeTy node);
 
-    /// returns the source of the AST Node
+    /// \return returns the source of the AST Node
     auto getSource() -> std::string const override;
 
-    /// returns the name of internal(name, source, source, typename) Node
+    /// \return returns the name of internal(name, source, source, typename) Node
     auto getInternalNodeName() -> std::string const;
 
-    /// returns the variant of the internal node
+    /// \return returns the variant of the internal node
     auto getInternalNode() -> InternalNodeTy const;
 
-    /// returns the node as specific type casted node in the AST
+    /// \tparam Type of node in the AST
+    /// \return returns the node as specific type casted node in the AST
     template <typename ASTNodeTy> auto getInternalNodeAs() -> ASTNodeTy * {
         return std::visit(
             Overload{[](const clang::Decl *decl) {
@@ -524,8 +674,8 @@ class ISPCGridExitNode : public BiDirectNode {
 // :ISPCGridExitNode
 
 /// removes a CFGNode from the control flow
-/// @params node to be removed
-/// @return node that was removed
+/// \param node to be removed
+/// \return node that was removed
 auto rmCFGNode(CFGNode *node) -> cfg::CFGNode *;
 
 // :utils

@@ -18,7 +18,7 @@ class ISPCGenerator {
     // every generator must override this to handle translation unit...
 
     /// handles the the CUDA Translation Unit
-    /// @params AST context of the Translation Unit
+    /// \param AST context of the Translation Unit
     virtual auto handleTranslationUnit(clang::ASTContext &)
         -> bool = 0; // !OVERRIDE THIS
   private:

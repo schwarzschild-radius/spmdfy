@@ -10,6 +10,8 @@ else()
     message(SEND_ERROR "LLVM 9 required due to CUDA 10.1 support")
 endif()
 
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
 add_executable(spmdfy src/main.cpp 
                       src/SpmdfyAction.cpp
                       src/utils.cpp
@@ -74,6 +76,9 @@ set(LLVM_LIBS LLVM)
 
 target_link_directories(spmdfy PRIVATE ${LLVM_LIBRARY_DIRS})
 target_link_libraries(spmdfy PRIVATE ${CLANG_LIBS} ${LLVM_LIBS})
+
+# Docs
+add_subdirectory(docs)
 
 # Tests and CTest
 enable_testing()

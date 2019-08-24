@@ -17,7 +17,8 @@ namespace pass {
 
 using SpmdTUTy = std::vector<cfg::CFGNode *>;
 
-/// macro representing the type created for the pass function
+/*! The type for the associated pass function so it can be invoked by the pass
+ * manager */
 #define PASS(FUNCTION, PASS_TYPE_NAME)                                         \
     struct PASS_TYPE_NAME {                                                    \
         constexpr static auto name{#PASS_TYPE_NAME};                           \
@@ -30,6 +31,7 @@ using SpmdTUTy = std::vector<cfg::CFGNode *>;
     };
 
 /// implements the invocation of the  pass
+/// \return returns the function return value
 // FIXME: Do I require this?
 template <class Fn, class Tuple, unsigned long... I>
 bool invoke_impl(Fn &&function, SpmdTUTy &spmd_tu,

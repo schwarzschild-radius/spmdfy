@@ -1,3 +1,11 @@
+/** \file PassManager.hpp
+ *  \brief class for creating pass manager and driving pass sequence
+ *
+ *  \author Pradeep Kumar  (schwarzschild-radius/@pt_of_no_return)
+ *  \bug No know bugs
+ *  \defgroup Pass
+ * */
+
 #ifndef PASS_MANAGER_HPP
 #define PASS_MANAGER_HPP
 

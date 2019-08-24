@@ -1,3 +1,12 @@
+/** \file SpmdfyAction.hpp
+ *  \brief Classes for accessing AST through libTooling and drive the ISPC
+ * generation
+ *
+ *  \author Pradeep Kumar  (schwarzschild-radius/@pt_of_no_return)
+ *  \bug No know bugs
+ *  \defgroup Frontend
+ * */
+
 #ifndef SPMDFY_ACTION_HPP
 #define SPMDFY_ACTION_HPP
 

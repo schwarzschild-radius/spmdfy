@@ -304,7 +304,7 @@ ForStmtNode::ForStmtNode(clang::ASTContext &ast_context,
 
 ReconvNode::ReconvNode(ConditionalNode *cond_node) {
     m_node_type = Reconv;
-    m_name = "ReconvNode";
+    m_name = getNodeTypeName();
     m_source = std::string();
     m_context = Kernel;
     back = m_prev;
