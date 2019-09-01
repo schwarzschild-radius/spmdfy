@@ -16,6 +16,7 @@
 #include <clang/ASTMatchers/ASTMatchFinder.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/FrontendAction.h>
+#include <clang/Lex/PPCallbacks.h>
 #include <clang/Tooling/Tooling.h>
 
 // llvm headers
@@ -86,6 +87,17 @@ class SpmdfyAction : public clang::ASTFrontendAction {
     virtual auto CreateASTConsumer(clang::CompilerInstance &Compiler,
                                    llvm::StringRef InFile)
         -> std::unique_ptr<clang::ASTConsumer> override;
+
+    auto ExecuteAction() -> void override;
+
+    auto InclusionDirective(clang::SourceLocation hash_loc,
+                            const clang::Token &include_token,
+                            llvm::StringRef file_name, bool is_angled,
+                            clang::CharSourceRange filename_range,
+                            const clang::FileEntry *file, llvm::StringRef search_path,
+                            llvm::StringRef relative_path,
+                            const clang::Module *imported,
+                            clang::SrcMgr::CharacteristicKind FileType) -> void;
 
   private:
     std::ostringstream &m_file_writer;
