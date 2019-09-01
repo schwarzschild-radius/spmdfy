@@ -21,3 +21,8 @@ llvm::cl::opt<bool> toggle_ispc_macros(
 llvm::cl::opt<std::string> generate_ispc_macros(
     "generate-ispc-macros", llvm::cl::desc("File containing ISPC Macros"),
     llvm::cl::value_desc("filename"), llvm::cl::cat(spmdfy_options));
+
+llvm::cl::opt<bool>
+    generate_decl("fgenerate-decls",
+                  llvm::cl::desc("Generate only ISPC declarations"),
+                  llvm::cl::cat(spmdfy_options));
