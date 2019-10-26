@@ -1,5 +1,3 @@
-#include "reduce.cuh"
-
 __global__ void reduce(int *a, int *partial_sum, int N) {
     size_t tid = threadIdx.x;
     size_t gid = threadIdx.x + blockIdx.x * blockDim.x;
