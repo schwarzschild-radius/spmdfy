@@ -1,6 +1,5 @@
 function(add_spmdfy_source ISPC_SOURCE_TARGET SPMDFY_CUDA_SOURCE SPMDFY_ISPC_SOURCE)
     set(oneValueArgs HINTS ISPC_DIR)
-    set(options VEROBSE DUMP_JSON)
 
     cmake_parse_arguments(SPMDFY "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
     set(SPMDFY_EXE ${SPMDFY_HINTS}/spmdfy)

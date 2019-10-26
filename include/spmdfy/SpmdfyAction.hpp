@@ -29,15 +29,11 @@
 #include <string>
 #include <vector>
 
-// third party headers
-#include <nlohmann/json.hpp>
-
 // spmdfy headers
 #include <spmdfy/Generator/CFGGenerator/CFGGenerator.hpp>
 #include <spmdfy/Generator/SimpleGenerator.hpp>
 #include <spmdfy/utils.hpp>
 
-namespace nl = nlohmann;
 namespace ct = clang::tooling;
 namespace mat = clang::ast_matchers;
 

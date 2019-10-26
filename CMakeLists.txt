@@ -38,7 +38,6 @@ add_executable(spmdfy src/main.cpp
 )
 
 target_include_directories(spmdfy PRIVATE include
-                                          third_party/json/include 
                                           third_party/spdlog/include)
 
 set_target_properties(spmdfy PROPERTIES CXX_STANDARD 17
