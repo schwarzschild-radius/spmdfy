@@ -10,7 +10,15 @@ else()
     message(SEND_ERROR "LLVM 9 required due to CUDA 10.1 support")
 endif()
 
+# Setting the compiler to clang
+set(CMAKE_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
+
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+set(SPMDFY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
+set(SPMDFY_BUILD_TYPE CMAKE_BUILD_TYPE)
+
+set(GENERATE_DOCS OFF CACHE BOOL "Set to Generate Doxygen based documentation")
+set(BUILD_TESTS ON CACHE BOOL "Enable testing using CTest")
 
 add_executable(spmdfy src/main.cpp 
                       src/SpmdfyAction.cpp
@@ -37,20 +45,23 @@ add_executable(spmdfy src/main.cpp
                       src/Pass/Passes/PrintCFGPass.cpp
 )
 
-target_include_directories(spmdfy PRIVATE include
+target_include_directories(spmdfy PRIVATE ${SPMDFY_INCLUDE_DIR}
+                                          # including llvm specific directories
+                                          ${LLVM_INCLUDE_DIRS}
+                                          ${CLANG_INCLUDE_DIRS}
+                                          # including third party libraries
                                           third_party/spdlog/include)
 
+# setting C++ standard to 17, required for variant                                          
 set_target_properties(spmdfy PROPERTIES CXX_STANDARD 17
                                         CXX_EXTENSIONS OFF)
-
-set(CMAKE_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
-target_include_directories(spmdfy PRIVATE ${LLVM_INCLUDE_DIRS})
-target_include_directories(spmdfy PRIVATE ${CLANG_INCLUDE_DIRS})
 target_compile_definitions(spmdfy PRIVATE ${LLVM_DEFINITIONS})
 
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
+if(SPMDFY_BUILD_TYPE STREQUAL Debug)
     message("Compiling in debug mode, Logging enabled")
     target_compile_definitions(spmdfy PRIVATE SPMDFY_DEBUG)
+else()
+    message("Compiling in debug mode, Logging disabled")
 endif()
 
 set(CLANG_LIBS clangFrontend
@@ -77,13 +88,17 @@ target_link_directories(spmdfy PRIVATE ${LLVM_LIBRARY_DIRS})
 target_link_libraries(spmdfy PRIVATE ${CLANG_LIBS} ${LLVM_LIBS})
 
 # Docs
-add_subdirectory(docs)
+if(GENERATE_DOCS)
+    add_subdirectory(docs)
+endif()
 
 # Tests and CTest
-enable_testing()
-add_subdirectory(examples)
-add_test(Test_Transpose examples/transpose/transpose)
-add_test(Test_Saxpy examples/saxpy/saxpy)
-add_test(Test_Shared_Memory examples/CUDA_Features/Shared_Memory/shared_memory)
-add_test(Test_Atomic examples/CUDA_Features/Atomic/atomic)
-add_test(Test_Reduce examples/reduce/reduce)
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(examples)
+    add_test(Test_Transpose examples/transpose/transpose)
+    add_test(Test_Saxpy examples/saxpy/saxpy)
+    add_test(Test_Shared_Memory examples/CUDA_Features/Shared_Memory/shared_memory)
+    add_test(Test_Atomic examples/CUDA_Features/Atomic/atomic)
+    add_test(Test_Reduce examples/reduce/reduce)
+endif(BUILD_TESTS)
