@@ -15,7 +15,6 @@ set(CMAKE_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 set(SPMDFY_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
-set(SPMDFY_BUILD_TYPE CMAKE_BUILD_TYPE)
 
 set(GENERATE_DOCS OFF CACHE BOOL "Set to Generate Doxygen based documentation")
 set(BUILD_TESTS ON CACHE BOOL "Enable testing using CTest")
@@ -57,7 +56,7 @@ set_target_properties(spmdfy PROPERTIES CXX_STANDARD 17
                                         CXX_EXTENSIONS OFF)
 target_compile_definitions(spmdfy PRIVATE ${LLVM_DEFINITIONS})
 
-if(SPMDFY_BUILD_TYPE STREQUAL Debug)
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
     message("Compiling in debug mode, Logging enabled")
     target_compile_definitions(spmdfy PRIVATE SPMDFY_DEBUG)
 else()
